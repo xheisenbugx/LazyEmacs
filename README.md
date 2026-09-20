@@ -382,6 +382,7 @@ storage. Never put tokens in the example files.
 
 | Symptom | What to check |
 |---|---|
+| `void-variable evil-mode-buffers` | Update LazyEmacs and restart. Evil 1.15.0 needs the included Emacs 31 compatibility shim; no package deletion is necessary |
 | Version error | Run `emacs --version`; this release requires 31.1 APIs |
 | Your old setup starts | Use `--init-directory` explicitly and check competing init files |
 | Package installation fails | Read `*Warnings*`, verify HTTPS/Git access, run `my/package-refresh`, restart |
@@ -427,6 +428,8 @@ After completing package installation and installing the TypeScript grammar:
 
 ```sh
 emacs -Q --batch --load scripts/integration.el
+LAZYEMACS_TEST_SUITE=evil-startup-tests.el \
+  emacs -Q --batch --load scripts/integration.el
 LAZYEMACS_TEST_SUITE=local-actions-tests.el \
   emacs -Q --batch --load scripts/integration.el
 git diff --check
