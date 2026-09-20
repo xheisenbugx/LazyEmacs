@@ -9,6 +9,8 @@
 
 ;;; Code:
 
+(require 'init-evil-compat)
+
 (use-package evil
   :demand t
   :init
