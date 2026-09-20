@@ -1,0 +1,30 @@
+# package.el downloads and native/byte compilation output
+/elpa/
+/eln-cache/
+*.elc
+*.eln
+
+# no-littering keeps generated configuration and state in these directories
+/etc/
+/var/
+
+# State created by the previous single-file configuration
+/auto-save-list/
+/backups/
+/history
+/network-security.data
+/places
+/recentf
+/tree-sitter/
+
+# Transient runtime files
+/.cache/
+/server/
+
+# Machine-specific settings, identities, and agent/runtime logs
+/user/
+/custom.el
+/.local/
+/.agent-shell/
+/.DS_Store
+/dist/
