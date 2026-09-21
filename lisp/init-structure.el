@@ -29,6 +29,8 @@
 (use-package evil-textobj-plus
   :vc (:url "https://github.com/xheisenbugx/evil-textobj-plus" :rev :newest)
   :demand t
+  :custom
+  (evil-textobj-plus-lines 500)
   :config
   ;; Preserve LazyVim's definition/body objects; F selects a function call.
   (setq-default evil-textobj-plus-custom-objects

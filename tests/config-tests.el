@@ -41,6 +41,7 @@
       (should (equal (buffer-substring evil-visual-beginning evil-visual-end) "a, b")))))
 
 (ert-deftest my/textobj-plus-nearby-operators-without-parser ()
+  (should (= evil-textobj-plus-lines 500))
   (with-temp-buffer
     (emacs-lisp-mode)
     (insert "before (one) after (two)")

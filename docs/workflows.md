@@ -265,8 +265,9 @@ after `d`, `c`, or `y`; normal-state Flash motions and `C-h/j/k/l` are unchanged
 
 `(`, `[`, `{`, `<` trim inner whitespace; their closing counterparts preserve
 it. `b` groups parentheses/brackets/braces; `q` groups quote types. Native word,
-paragraph and other unmodified Evil text objects remain available. Counts and
-`.` repeat work with the new objects. Search covers at most 50 lines each way;
+paragraph and other unmodified Evil text objects remain available. Bracket
+objects also match in strings/comments, following mini.ai. Counts and
+`.` repeat work with the new objects. Search tries the current line first, then at most 500 lines each way;
 change `evil-textobj-plus-lines` or provide custom regexp/Tree-sitter objects
 through `evil-textobj-plus-custom-objects`. See the package README for details.
 
