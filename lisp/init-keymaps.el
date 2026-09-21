@@ -15,83 +15,79 @@
 (defvar my/leader-buffer-map nil "Buffer commands.")
 (setq my/leader-buffer-map
       (define-keymap
-	:prefix 'my/leader-buffer-prefix
-	"b" #'crux-switch-to-previous-buffer
-	"i" #'ibuffer
-	"d" #'kill-current-buffer
-	"k" #'kill-current-buffer
-	"K" #'kill-buffer
-	"n" #'next-buffer
-	"p" #'previous-buffer
-	"r" #'revert-buffer
-	"s" #'scratch-buffer))
+       :prefix 'my/leader-buffer-prefix
+       "b" #'crux-switch-to-previous-buffer
+       "d" #'kill-current-buffer
+       "D" #'my/kill-buffer-and-window
+       "o" #'my/kill-other-file-buffers
+       "i" #'my/kill-invisible-file-buffers
+       "j" #'consult-buffer
+       "K" #'kill-buffer))
 
-(defvar my/leader-code-map nil "Language, compilation, and formatting commands.")
+(defvar my/leader-code-map nil "Language and formatting commands.")
 (setq my/leader-code-map
       (define-keymap
-	:prefix 'my/leader-code-prefix
-	"a" #'my/lsp-code-actions
-	"c" #'compile
-	"C" #'recompile
-	"d" #'eldoc-doc-buffer
-	"f" #'my/format-buffer
-	"i" #'my/lsp-file-symbols
-	"l" #'my/lsp-start
-	"o" #'my/lsp-organize-imports
-	"q" #'my/lsp-code-actions
-	"r" #'my/lsp-rename
-	"R" #'my/lsp-restart
-	"s" #'my/lsp-workspace-symbols
-	"x" #'my/lsp-shutdown))
+       :prefix 'my/leader-code-prefix
+       "a" #'my/lsp-code-actions
+       "d" #'flycheck-display-error-at-point
+       "f" #'my/format-buffer
+       "l" #'lsp-describe-session
+       "o" #'my/lsp-organize-imports
+       "r" #'my/lsp-rename
+       "R" #'crux-rename-file-and-buffer
+       "s" #'my/lsp-file-symbols))
 
-(defvar my/leader-error-map nil "Diagnostic commands.")
+(defvar my/leader-error-map nil "Diagnostics and result lists.")
 (setq my/leader-error-map
       (define-keymap
-	:prefix 'my/leader-error-prefix
-	"b" #'my/lsp-file-diagnostics
-	"d" #'flycheck-display-error-at-point
-	"f" #'consult-flycheck
-	"L" #'flycheck-list-errors
-	"l" #'my/lsp-diagnostics
-	"n" #'flycheck-next-error
-	"p" #'flycheck-previous-error
-	"P" #'my/lsp-diagnostics))
+       :prefix 'my/leader-error-prefix
+       "x" #'my/lsp-diagnostics
+       "X" #'my/lsp-file-diagnostics
+       "f" #'consult-flycheck
+       "L" #'flycheck-list-errors
+       "q" #'my/results-show))
 
-(defvar my/leader-file-map nil "File and directory commands.")
+(defvar my/leader-file-map nil "Files and directories.")
 (setq my/leader-file-map
       (define-keymap
-	:prefix 'my/leader-file-prefix
-	"b" #'consult-bookmark
-	"c" #'my/open-init-file
-	"d" #'consult-dir
-	"D" #'crux-delete-file-and-buffer
-	"e" #'dirvish-side
-	"f" #'find-file
-	"j" #'dired-jump
-	"o" #'crux-open-with
-	"p" #'my/copy-buffer-file-name
-	"r" #'consult-recent-file
-	"R" #'crux-rename-file-and-buffer
-	"s" #'save-buffer
-	"S" #'write-file
-	"u" #'sudo-edit))
+       :prefix 'my/leader-file-prefix
+       "b" #'consult-project-buffer
+       "B" #'consult-buffer
+       "c" #'my/open-init-file
+       "d" #'consult-dir
+       "D" #'crux-delete-file-and-buffer
+       "e" #'my/project-explorer
+       "E" #'dirvish-side
+       "f" #'project-find-file
+       "F" #'my/find-file-cwd
+       "j" #'dired-jump
+       "n" #'my/new-file
+       "o" #'crux-open-with
+       "p" #'project-switch-project
+       "r" #'consult-recent-file
+       "R" #'my/recent-files-cwd
+       "s" #'save-buffer
+       "S" #'write-file
+       "t" #'my/project-ghostel
+       "T" #'my/directory-ghostel
+       "u" #'sudo-edit
+       "y" #'my/copy-buffer-file-name))
 
-(defvar my/leader-git-map nil "Git and hunk commands.")
+(defvar my/leader-git-map nil "Git commands and hunk actions.")
 (setq my/leader-git-map
       (define-keymap
-	:prefix 'my/leader-git-prefix
-	"b" #'magit-blame-addition
-	"d" #'magit-diff-buffer-file
-	"f" #'magit-file-dispatch
-	"g" #'magit-status
-	"h" #'diff-hl-show-hunk
-	"l" #'magit-log-current
-	"n" #'diff-hl-next-hunk
-	"p" #'diff-hl-previous-hunk
-	"r" #'diff-hl-revert-hunk
-	"s" #'diff-hl-stage-current-hunk
-	"y" #'git-link
-	"Y" #'git-link-commit))
+       :prefix 'my/leader-git-prefix
+       "b" #'magit-blame-addition
+       "B" #'my/git-browse
+       "d" #'magit-diff-buffer-file
+       "f" #'magit-log-buffer-file
+       "g" #'magit-status
+       "l" #'magit-log-current
+       "s" #'magit-status
+       "Y" #'my/git-copy-link
+       "h p" #'diff-hl-show-hunk
+       "h s" #'diff-hl-stage-current-hunk
+       "h r" #'diff-hl-revert-hunk))
 
 (defvar my/leader-help-map nil "Help and documentation commands.")
 (setq my/leader-help-map
@@ -108,20 +104,16 @@
         "D" #'lazyemacs-doctor
 	"v" #'helpful-variable))
 
-(defvar my/leader-jump-map nil "Navigation commands.")
+(defvar my/leader-jump-map nil "Additional navigation commands.")
 (setq my/leader-jump-map
       (define-keymap
-	:prefix 'my/leader-jump-prefix
-	"b" #'xref-go-back
-	"c" #'avy-goto-char-timer
-	"d" #'my/lsp-find-definitions
-	"f" #'xref-go-forward
-	"l" #'consult-goto-line
-	"i" #'my/lsp-find-implementations
-	"o" #'consult-outline
-	"r" #'my/lsp-find-references
-	"s" #'my/lsp-file-symbols
-	"w" #'avy-goto-word-1))
+       :prefix 'my/leader-jump-prefix
+       "b" #'xref-go-back
+       "c" #'avy-goto-char-timer
+       "f" #'xref-go-forward
+       "l" #'consult-goto-line
+       "o" #'consult-outline
+       "w" #'avy-goto-word-1))
 
 (defvar my/leader-multiple-cursors-map nil "Multiple-cursor commands.")
 (setq my/leader-multiple-cursors-map
@@ -159,18 +151,14 @@
 (defvar my/leader-project-map nil "Project commands.")
 (setq my/leader-project-map
       (define-keymap
-	:prefix 'my/leader-project-prefix
-	"b" #'consult-project-buffer
-	"c" #'project-compile
-	"d" #'project-dired
-	"e" #'my/project-ghostel
-	"f" #'project-find-file
-	"k" #'project-kill-buffers
-	"p" #'project-switch-project
-	"r" #'project-query-replace-regexp
-	"s" #'consult-ripgrep
-	"t" #'my/project-ghostel
-	"T" #'my/project-ghostel-new))
+       :prefix 'my/leader-project-prefix
+       "b" #'consult-project-buffer
+       "c" #'project-compile
+       "d" #'project-dired
+       "f" #'project-find-file
+       "k" #'project-kill-buffers
+       "p" #'project-switch-project
+       "s" #'consult-ripgrep))
 
 (defvar my/leader-session-map nil "Configuration and session commands.")
 (setq my/leader-session-map
@@ -186,45 +174,50 @@
 (defvar my/leader-search-map nil "Search and filtering commands.")
 (setq my/leader-search-map
       (define-keymap
-	:prefix 'my/leader-search-prefix
-	"b" #'consult-line
-	"d" #'my/lsp-diagnostics
-	"f" #'my/consult-find
-	"s" #'consult-lsp-file-symbols
-	"g" #'consult-ripgrep
-	"r" #'project-query-replace-regexp
-	"S" #'my/lsp-workspace-symbols
-	"i" #'consult-imenu
-	"k" #'consult-keep-lines
-	"l" #'consult-line
-	"L" #'consult-line-multi
-	"m" #'consult-man
-	"o" #'consult-lsp-file-symbols
-	"u" #'consult-focus-lines))
+       :prefix 'my/leader-search-prefix
+       "b" #'consult-line
+       "B" #'my/search-open-buffers
+       "d" #'my/lsp-diagnostics
+       "D" #'my/lsp-file-diagnostics
+       "f" #'my/consult-find
+       "s" #'my/lsp-file-symbols
+       "S" #'my/lsp-workspace-symbols
+       "g" #'consult-ripgrep
+       "G" #'my/search-cwd
+       "r" #'my/search-replace
+       "R" #'vertico-repeat
+       "i" #'consult-imenu
+       "k" #'describe-bindings
+       "m" #'consult-mark
+       "M" #'consult-man
+       "u" #'vundo
+       "w" #'my/search-word
+       "W" #'my/search-word-cwd
+       "c" #'consult-history
+       "C" #'execute-extended-command))
 
-(defvar my/leader-terminal-map nil "Shell and terminal commands.")
-(setq my/leader-terminal-map
+(defvar my/leader-test-map nil "Focused test commands.")
+(setq my/leader-test-map
       (define-keymap
-	:prefix 'my/leader-terminal-prefix
-	"e" #'ghostel
-	"n" #'my/project-ghostel-new
-	"p" #'my/project-ghostel
-	"s" #'ghostel
-	"t" #'ghostel))
+       :prefix 'my/leader-test-prefix
+       "t" #'my/project-test-file
+       "r" #'my/project-test-nearest
+       "l" #'my/project-test-last
+       "o" #'my/project-test-output
+       "S" #'my/project-test-stop))
 
 (defvar my/leader-ui-map nil "UI toggles.")
 (setq my/leader-ui-map
       (define-keymap
-	:prefix 'my/leader-ui-prefix
-	"d" #'my/lsp-toggle-diagnostics
-	"f" #'my/toggle-format-on-save
-	"h" #'global-hl-line-mode
-	"l" #'display-line-numbers-mode
-	"L" #'my/toggle-relative-line-numbers
-	"t" #'my/toggle-theme
-	"T" #'toggle-truncate-lines
-	"v" #'visual-line-mode
-	"w" #'whitespace-mode))
+       :prefix 'my/leader-ui-prefix
+       "d" #'my/lsp-toggle-diagnostics
+       "f" #'my/toggle-global-format-on-save
+       "F" #'my/toggle-format-on-save
+       "h" #'my/lsp-toggle-inlay-hints
+       "l" #'display-line-numbers-mode
+       "L" #'my/toggle-relative-line-numbers
+       "b" #'my/toggle-theme
+       "w" #'visual-line-mode))
 
 (defvar my/leader-window-map nil "Window and layout commands.")
 (setq my/leader-window-map
@@ -248,33 +241,35 @@
 	"<up>" #'windmove-up
 	"<right>" #'windmove-right))
 
-(defvar my/leader-workspace-map nil "Sessions (tab groups) and their tabs.")
+(defvar my/leader-workspace-map nil "Layout tabs within the current session.")
 (setq my/leader-workspace-map
       (define-keymap
-	:prefix 'my/leader-workspace-prefix
-	"[" #'project-tab-sessions-previous-tab
-	"]" #'project-tab-sessions-next-tab
-	"b" #'project-tab-sessions-switch-tab
-	"g" #'project-tab-sessions-switch
-	"G" #'tab-bar-change-tab-group
-	"k" #'tab-bar-close-tab
-	"n" #'tab-bar-new-tab
-	"N" #'my/session-new-layout
-	"r" #'tab-bar-rename-tab
-	"u" #'tab-bar-history-back
-	"R" #'tab-bar-history-forward))
+       :prefix 'my/leader-workspace-prefix
+       "[" #'project-tab-sessions-previous-tab
+       "]" #'project-tab-sessions-next-tab
+       "b" #'project-tab-sessions-switch-tab
+       "g" #'my/session-switch
+       "G" #'tab-bar-change-tab-group
+       "d" #'tab-bar-close-tab
+       "TAB" #'tab-bar-new-tab
+       "<tab>" #'tab-bar-new-tab
+       "f" #'my/session-first-tab
+       "l" #'my/session-last-tab
+       "o" #'my/session-close-other-tabs
+       "N" #'my/session-new-layout
+       "r" #'tab-bar-rename-tab
+       "u" #'tab-bar-history-back
+       "R" #'tab-bar-history-forward))
 
-(defvar my/leader-run-map nil "Project tasks and focused tests.")
+(defvar my/leader-run-map nil "General project tasks.")
 (setq my/leader-run-map
       (define-keymap
-	:prefix 'my/leader-run-prefix
-	"r" #'my/project-run-task
-	"R" #'my/project-rerun-task
-	"f" #'my/project-test-file
-	"t" #'my/project-test-nearest
-	"o" #'my/project-task-output
-	"n" #'my/project-task-next-error
-	"T" #'my/project-task-terminal))
+       :prefix 'my/leader-run-prefix
+       "r" #'my/project-run-task
+       "R" #'my/project-rerun-task
+       "o" #'my/project-task-output
+       "n" #'my/project-task-next-error
+       "T" #'my/project-task-terminal))
 
 (defun my/toggle-relative-line-numbers ()
   "Toggle absolute/relative numbering in this buffer."
@@ -316,7 +311,7 @@
 (keymap-global-set "C-c p" my/leader-project-map)
 (keymap-global-set "C-c q" my/leader-session-map)
 (keymap-global-set "C-c s" my/leader-search-map)
-(keymap-global-set "C-c t" my/leader-terminal-map)
+(keymap-global-set "C-c t" my/leader-test-map)
 (keymap-global-set "C-c u" my/leader-ui-map)
 (keymap-global-set "C-c w" my/leader-window-map)
 (keymap-global-set "C-c y" my/leader-snippet-map)
@@ -329,8 +324,8 @@
                        (lambda () (interactive) (project-tab-sessions-select-tab number)))))
 (keymap-global-set "C-<tab>" #'project-tab-sessions-next-tab)
 (keymap-global-set "C-S-<tab>" #'project-tab-sessions-previous-tab)
-(keymap-global-set "C-x t g" #'project-tab-sessions-switch)
-(keymap-global-set "s-p" #'project-tab-sessions-switch)
+(keymap-global-set "C-x t g" #'my/session-switch)
+(keymap-global-set "s-p" #'my/session-switch)
 (keymap-global-set "s-t" #'tab-bar-new-tab)
 (keymap-global-set "s-r" #'tab-bar-rename-tab)
 (keymap-global-set "s-w" #'tab-bar-close-tab)
@@ -363,11 +358,17 @@
  "p" '(:keymap my/leader-project-map :which-key "Projects")
  "q" '(:keymap my/leader-session-map :which-key "Session")
  "s" '(:keymap my/leader-search-map :which-key "Search")
- "t" '(:keymap my/leader-terminal-map :which-key "Terminal")
+ "t" '(:keymap my/leader-test-map :which-key "Tests")
  "u" '(:keymap my/leader-ui-map :which-key "UI toggles")
  "w" '(:keymap my/leader-window-map :which-key "Windows")
  "y" '(:keymap my/leader-snippet-map :which-key "Snippets")
- "z" '(:keymap my/leader-workspace-map :which-key "Workspaces"))
+ "TAB" '(:keymap my/leader-workspace-map :which-key "Tabs")
+ "<tab>" '(:keymap my/leader-workspace-map :which-key "Tabs")
+ "z" nil
+ "." '(my/scratch-toggle :which-key "Scratch")
+ "`" '(crux-switch-to-previous-buffer :which-key "Other buffer")
+ ":" '(consult-history :which-key "Command history")
+ "?" '(which-key-show-full-major-mode :which-key "Buffer keys"))
 
 ;;; Evil-native navigation
 
@@ -393,8 +394,19 @@
 (general-define-key
  :states 'normal :keymaps 'override
  (kbd "gd") #'my/lsp-find-definitions
- (kbd "gi") #'my/lsp-find-implementations
+ (kbd "gi") nil
  (kbd "gI") #'my/lsp-find-implementations
+ (kbd "gy") #'my/lsp-find-type-definition
+ (kbd "gD") #'my/lsp-find-declaration
+ (kbd "gK") #'my/lsp-signature-help
+ (kbd "gai") #'my/lsp-incoming-calls
+ (kbd "gao") #'my/lsp-outgoing-calls
+ (kbd "]e") #'my/next-error-diagnostic
+ (kbd "[e") #'my/previous-error-diagnostic
+ (kbd "]w") #'my/next-warning-diagnostic
+ (kbd "[w") #'my/previous-warning-diagnostic
+ (kbd "]h") #'diff-hl-next-hunk
+ (kbd "[h") #'diff-hl-previous-hunk
  (kbd "gr") #'my/lsp-find-references
  (kbd "K") #'eldoc-doc-buffer
  (kbd "] d") #'flycheck-next-error
@@ -424,14 +436,36 @@
     (keymap-set map "C-k" #'windmove-up)
     (keymap-set map "C-l" #'windmove-right)))
 
+(define-minor-mode my/editor-shortcuts-mode
+  "LazyVim editing keys, excluding terminals, minibuffers and special buffers."
+  :lighter nil :keymap (make-sparse-keymap))
+(evil-define-minor-mode-key '(normal insert visual replace) 'my/editor-shortcuts-mode
+  (kbd "C-s") #'save-buffer
+  (kbd "M-j") #'move-text-down
+  (kbd "M-k") #'move-text-up)
+(evil-define-minor-mode-key 'normal 'my/editor-shortcuts-mode
+  (kbd "H") #'previous-buffer
+  (kbd "L") #'next-buffer)
+
+(defun my/editor-shortcuts-setup ()
+  "Enable editing shortcuts only in ordinary editing buffers."
+  (my/editor-shortcuts-mode
+   (if (and (not (minibufferp))
+            (not (derived-mode-p 'special-mode 'comint-mode 'term-mode 'ghostel-mode))
+            (or (derived-mode-p 'prog-mode 'text-mode 'conf-mode)
+                (eq major-mode 'fundamental-mode))) 1 -1)))
+(add-hook 'after-change-major-mode-hook #'my/editor-shortcuts-setup)
+(dolist (buffer (buffer-list))
+  (with-current-buffer buffer (my/editor-shortcuts-setup)))
+
 ;;; Familiar Emacs shortcuts upgraded with richer commands
 
 (keymap-global-set "C-s" #'consult-line)
 (keymap-global-set "M-y" #'consult-yank-pop)
 (keymap-global-set "C-x b" #'consult-buffer)
 (keymap-global-set "C-x p b" #'consult-project-buffer)
-(keymap-global-set "C-x p e" #'my/project-ghostel)
-(keymap-global-set "C-x p s" #'my/project-ghostel)
+(keymap-global-unset "C-x p e")
+(keymap-global-unset "C-x p s")
 (keymap-global-set "C-x g" #'magit-status)
 (keymap-global-set "C-x k" #'kill-current-buffer)
 (keymap-global-set "C-x K" #'kill-buffer)
@@ -444,27 +478,21 @@
 (keymap-global-set "C-." #'embark-act)
 (keymap-global-set "C-;" #'embark-dwim)
 (keymap-global-set "C-=" #'er/expand-region)
-(keymap-global-set "C-:" #'avy-goto-char-timer)
+(keymap-global-unset "M-<up>")
+(keymap-global-unset "M-<down>")
+(keymap-global-unset "C-:")
 (keymap-global-set "C-a" #'crux-move-beginning-of-line)
 (keymap-global-set "C-k" #'crux-smart-kill-line)
 (keymap-global-set "M-;" #'comment-dwim-2)
 (keymap-global-set "M-R" #'vertico-repeat)
-(keymap-global-set "M-g c" #'avy-goto-char-timer)
-(keymap-global-set "M-g w" #'avy-goto-word-1)
+(keymap-global-unset "M-g c")
+(keymap-global-unset "M-g w")
 (keymap-global-set "M-g g" #'consult-goto-line)
 (keymap-global-set "M-g i" #'consult-imenu)
 (keymap-global-set "M-s r" #'consult-ripgrep)
 (keymap-global-set "C-`" #'popper-toggle)
 (keymap-global-set "M-`" #'popper-cycle)
 (keymap-global-set "C-M-`" #'popper-toggle-type)
-
-;; (defun my-mark-line ()
-;;   (interactive)
-;;   (push-mark (line-beginning-position))
-;;   (goto-char (line-end-position))
-;;   (activate-mark))
-
-;; (define-key global-map (kbd "C-S-SPC") #'my-mark-line)
 
 ;; Helpful is a drop-in improvement for the built-in help namespace.
 (keymap-global-set "C-h f" #'helpful-callable)
@@ -490,11 +518,11 @@
   "C-c p" '("Projects" . my/leader-project-prefix)
   "C-c q" '("Session" . my/leader-session-prefix)
   "C-c s" '("Search" . my/leader-search-prefix)
-  "C-c t" '("Terminal" . my/leader-terminal-prefix)
+  "C-c t" '("Tests" . my/leader-test-prefix)
   "C-c u" '("UI toggles" . my/leader-ui-prefix)
   "C-c w" '("Windows" . my/leader-window-prefix)
   "C-c y" '("Snippets" . my/leader-snippet-prefix)
-  "C-c z" '("Workspaces" . my/leader-workspace-prefix))
+  "C-c z" '("Tabs" . my/leader-workspace-prefix))
 
 (provide 'init-keymaps)
 ;;; init-keymaps.el ends here

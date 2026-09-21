@@ -39,5 +39,17 @@
   ;; Opening immediately mirrors the common "copy/open permalink" workflow.
   (git-link-open-in-browser t))
 
+(defun my/git-browse ()
+  "Open a repository link for the current file or selection."
+  (interactive)
+  (require 'git-link)
+  (let ((git-link-open-in-browser t)) (call-interactively #'git-link)))
+
+(defun my/git-copy-link ()
+  "Copy a repository link without opening a browser."
+  (interactive)
+  (require 'git-link)
+  (let ((git-link-open-in-browser nil)) (call-interactively #'git-link)))
+
 (provide 'init-vcs)
 ;;; init-vcs.el ends here

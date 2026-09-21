@@ -1,7 +1,7 @@
 ;;; init-ui.el --- Theme, modeline, and visual feedback -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; The goal is a quiet but information-rich interface: a readable built-in
+;; The goal is a quiet but information-rich interface: a readable
 ;; theme, icons where they aid scanning, and clear navigation feedback.
 
 ;;; Code:
@@ -29,8 +29,8 @@
 (size-indication-mode 1)
 (setq-default cursor-type 'bar)
 
-;; The Modus themes ship with Emacs, have excellent contrast, and cover the
-;; standard faces used by lsp-mode, Flycheck, Org, and package UIs.
+;; Theme choices come from the distribution options, including a bundled
+;; Modus light theme and the installed Catppuccin dark theme by default.
 (defvaralias 'my/dark-theme 'lazyemacs-dark-theme)
 (defvaralias 'my/light-theme 'lazyemacs-light-theme)
 
@@ -40,7 +40,7 @@
   (load-theme theme t))
 
 (defun my/toggle-theme ()
-  "Toggle between the configured dark and light Modus themes."
+  "Toggle between the configured dark and light themes."
   (interactive)
   (my/load-theme
    (if (memq my/dark-theme custom-enabled-themes)
@@ -60,7 +60,7 @@
   "Apply the first available preferred font to FRAME."
   (with-selected-frame (or frame (selected-frame))
     (when (display-graphic-p)
-      (when-let ((font (seq-find (lambda (family)
+      (when-let* ((font (seq-find (lambda (family)
                                   (member family (font-family-list)))
                                 my/preferred-monospace-fonts)))
         (set-face-attribute 'default frame

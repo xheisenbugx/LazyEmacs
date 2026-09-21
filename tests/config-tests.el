@@ -53,7 +53,7 @@
     (dolist (pair '(("SPC SPC" . project-find-file)
                     ("SPC ," . consult-project-buffer)
                     ("SPC e" . my/project-explorer)
-                    ("SPC r t" . my/project-test-nearest)
+                    ("SPC t r" . my/project-test-nearest)
                     ("SPC m n" . evil-mc-make-and-goto-next-match)
                     ("gr" . my/lsp-find-references)
                     ("gI" . my/lsp-find-implementations)

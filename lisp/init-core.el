@@ -168,7 +168,7 @@ Restart Emacs after changing early-init.el or package initialization."
 (defun my/copy-buffer-file-name ()
   "Copy the current file or Dired directory path to the kill ring."
   (interactive)
-  (if-let ((path (or buffer-file-name
+  (if-let* ((path (or buffer-file-name
                      (and (derived-mode-p 'dired-mode)
                           default-directory))))
       (progn

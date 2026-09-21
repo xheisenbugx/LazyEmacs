@@ -5,43 +5,58 @@
 
 ;;; Code:
 
-(defun my/project-ghostel ()
-  "Open or reuse a Ghostel terminal rooted at the current project."
-  (interactive)
+(defun my/ghostel-pane (fresh cwd toggle)
+  "Show a tab-owned terminal, optionally FRESH, in CWD or the project root.
+When TOGGLE is non-nil, hide an already visible pane without killing it."
   (require 'ghostel)
-  (call-interactively #'ghostel-project))
-
-(defun my/project-ghostel-new ()
-  "Start a fresh Ghostel shell at the current project's root every time."
-  (interactive)
-  (require 'ghostel)
-  ;; A non-numeric prefix requests a new terminal instance, never reuse.
-  (ghostel-project '(4)))
-
-(defun my/ghostel-toggle ()
-  "Show or hide this workspace's Ghostel pane without stopping its shell."
-  (interactive)
-  (require 'ghostel)
-  (require 'tab-bar)
-  ;; Store ownership on the tab itself, so renaming or reordering workspaces
-  ;; keeps their terminals and two workspaces with the same name stay separate.
   (let* ((tab (tab-bar--current-tab-find))
-         (terminal (alist-get 'my/ghostel-buffer tab))
-         (buffer (and (buffer-live-p terminal) terminal))
+         (directory (file-name-as-directory
+                     (expand-file-name
+                      (if cwd default-directory
+                        (if-let* ((project (project-current nil)))
+                            (project-root project) default-directory)))))
+         (terminals (alist-get 'my/ghostel-cwd-buffers tab))
+         (terminal (if cwd (alist-get directory terminals nil nil #'equal)
+                     (alist-get 'my/ghostel-buffer tab)))
+         (buffer (and (not fresh) (buffer-live-p terminal) terminal))
          (window (and buffer (get-buffer-window buffer)))
          (action '((display-buffer-in-side-window)
                    (side . bottom) (slot . 0) (window-height . 0.33))))
-    (if window
-        (quit-window nil window)
-      (if buffer
-          (pop-to-buffer buffer action)
-        (let* ((project (project-current nil))
-               (default-directory (if project (project-root project) default-directory))
-               (created (ghostel-create
-                        (format "*ghostel:%s*" (alist-get 'name tab)) action)))
-          (setf (alist-get 'my/ghostel-buffer
-                          (cdr (tab-bar--current-tab-find)))
-                created))))))
+    (cond
+     ((and toggle window) (quit-window nil window) buffer)
+     (buffer (pop-to-buffer buffer action) buffer)
+     (t
+      (let* ((default-directory directory)
+             (created (ghostel-create
+                       (format "*ghostel:%s%s*" (alist-get 'name tab)
+                               (if cwd ":cwd" "")) action)))
+        (if cwd
+            (setf (alist-get directory
+                             (alist-get 'my/ghostel-cwd-buffers (cdr tab))
+                             nil nil #'equal) created)
+          (setf (alist-get 'my/ghostel-buffer (cdr tab)) created))
+        created)))))
+
+(defun my/project-ghostel (&optional fresh)
+  "Show this tab's project terminal; with prefix FRESH, start a new shell."
+  (interactive "P")
+  (my/ghostel-pane fresh nil nil))
+
+(defun my/directory-ghostel (&optional fresh)
+  "Show this tab's current-directory terminal; with prefix FRESH, create one."
+  (interactive "P")
+  (my/ghostel-pane fresh t nil))
+
+(defun my/project-ghostel-new ()
+  "Start an independent project shell for an interactive task."
+  (interactive)
+  (require 'ghostel)
+  (ghostel-project '(4)))
+
+(defun my/ghostel-toggle ()
+  "Show or hide this tab's project terminal without stopping its shell."
+  (interactive)
+  (my/ghostel-pane nil nil t))
 
 (use-package ghostel
   :commands (ghostel ghostel-create ghostel-project)

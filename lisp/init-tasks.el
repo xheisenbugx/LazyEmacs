@@ -17,8 +17,13 @@
 (defvar my/project-task-history nil "History of manually entered task commands.")
 (defvar my/project-task-buffers (make-hash-table :test #'equal)
   "Compilation buffers indexed by canonical project root.")
+(defvar my/project-last-tests nil
+  "Last focused test command for each canonical project root.")
+(defvar my/project-test-buffers (make-hash-table :test #'equal)
+  "Focused test output buffers, separate from general task output.")
 (with-eval-after-load 'savehist
   (add-to-list 'savehist-additional-variables 'my/project-last-tasks)
+  (add-to-list 'savehist-additional-variables 'my/project-last-tests)
   (add-to-list 'savehist-additional-variables 'my/project-task-history))
 
 (defun my/task-root ()
@@ -67,19 +72,22 @@
     (or (cdr (assoc choice choices))
         (read-shell-command "Command: " nil 'my/project-task-history))))
 
-(defun my/task-run (root command)
-  "Run COMMAND in ROOT and remember its output independently of other projects."
+(defun my/task-run (root command &optional test)
+  "Run COMMAND in ROOT; keep TEST history and output separate from other tasks."
   (when (string-empty-p (string-trim command)) (user-error "Empty task command"))
   (let ((default-directory root)
-        (name (format "*task:%s:%s*"
+        (name (format "*%s:%s:%s*"
+                      (if test "test" "task")
                       (file-name-nondirectory (directory-file-name root))
                       (substring (secure-hash 'sha1 root) 0 8))))
     (save-some-buffers nil
                        (lambda () (and buffer-file-name
                                        (file-in-directory-p buffer-file-name root))))
     (let ((buffer (compilation-start command 'compilation-mode (lambda (_) name))))
-      (setf (alist-get root my/project-last-tasks nil nil #'equal) command)
-      (puthash root buffer my/project-task-buffers)
+      (if test
+          (setf (alist-get root my/project-last-tests nil nil #'equal) command)
+        (setf (alist-get root my/project-last-tasks nil nil #'equal) command))
+      (puthash root buffer (if test my/project-test-buffers my/project-task-buffers))
       buffer)))
 
 (defun my/project-run-task ()
@@ -209,11 +217,35 @@ With NEAREST, narrow to the surrounding supported test."
 (defun my/project-test-file ()
   "Run tests in the current file."
   (interactive)
-  (let ((root (my/task-root))) (my/task-run root (my/task-test-command root nil))))
+  (let ((root (my/task-root))) (my/task-run root (my/task-test-command root nil) t)))
 (defun my/project-test-nearest ()
   "Run the nearest supported test."
   (interactive)
-  (let ((root (my/task-root))) (my/task-run root (my/task-test-command root t))))
+  (let ((root (my/task-root))) (my/task-run root (my/task-test-command root t) t)))
+
+(defun my/project-test-last ()
+  "Repeat this project's last focused test, even after running other tasks."
+  (interactive)
+  (let* ((root (my/task-root))
+         (command (alist-get root my/project-last-tests nil nil #'equal)))
+    (unless command (user-error "No previous focused test; use SPC tt or SPC tr"))
+    (my/task-run root command t)))
+
+(defun my/project-test-output ()
+  "Show this project's focused test output."
+  (interactive)
+  (let ((buffer (gethash (my/task-root) my/project-test-buffers)))
+    (unless (buffer-live-p buffer) (user-error "No test output for this project"))
+    (pop-to-buffer buffer)))
+
+(defun my/project-test-stop ()
+  "Stop only this project's running focused test."
+  (interactive)
+  (let* ((buffer (gethash (my/task-root) my/project-test-buffers))
+         (process (and (buffer-live-p buffer) (get-buffer-process buffer))))
+    (unless (and process (process-live-p process))
+      (user-error "No focused test is running in this project"))
+    (with-current-buffer buffer (kill-compilation))))
 
 (provide 'init-tasks)
 ;;; init-tasks.el ends here
