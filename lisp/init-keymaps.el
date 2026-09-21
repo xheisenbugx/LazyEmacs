@@ -187,6 +187,8 @@
 (setq my/leader-search-map
       (define-keymap
 	:prefix 'my/leader-search-prefix
+	"b" #'consult-line
+	"d" #'my/lsp-diagnostics
 	"f" #'my/consult-find
 	"s" #'consult-lsp-file-symbols
 	"g" #'consult-ripgrep
