@@ -305,7 +305,7 @@ Consult preview responsive."
          (target (nth (1- (abs count)) candidates)))
     (unless target (user-error "No more %s diagnostics" level))
     (goto-char target)
-    (flycheck-display-error-at-point)))
+    (my/show-diagnostic-at-point)))
 
 (defun my/next-error-diagnostic (count)
   "Move forward COUNT error diagnostics."
@@ -490,6 +490,13 @@ this Emacs session.  Use Customize to persist the choice across restarts."
 
 ;;; Diagnostics and documentation
 
+(defun my/show-diagnostic-at-point ()
+  "Show diagnostics explicitly in the echo area, without opening Eldoc."
+  (interactive)
+  (require 'flycheck)
+  (let ((flycheck-display-errors-function #'flycheck-display-error-messages))
+    (flycheck-display-error-at-point)))
+
 (use-package flycheck
   :commands
   (flycheck-list-errors flycheck-next-error flycheck-previous-error)
@@ -499,7 +506,9 @@ this Emacs session.  Use Customize to persist the choice across restarts."
   ;; that necessary refresh away from active typing.
   (flycheck-check-syntax-automatically '(save mode-enabled idle-change))
   (flycheck-idle-change-delay 0.8)
-  (flycheck-display-errors-delay 0.3)
+  ;; Keep error underlines/list navigation, but do not feed errors to Eldoc
+  ;; or show them automatically when point lands on an error.
+  (flycheck-display-errors-function nil)
   (flycheck-indication-mode 'right-fringe)
   (flycheck-emacs-lisp-load-path 'inherit))
 
