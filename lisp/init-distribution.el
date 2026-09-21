@@ -20,7 +20,7 @@
   "Light theme used by the theme toggle."
   :type 'symbol :group 'lazyemacs)
 (defcustom lazyemacs-fonts
-  '("JetBrainsMono Nerd Font Mono" "Iosevka Nerd Font Mono" "Menlo" "DejaVu Sans Mono")
+  '("BlexMono Nerd Font Mono" "JetBrainsMono Nerd Font Mono" "Iosevka Nerd Font Mono" "Menlo" "DejaVu Sans Mono")
   "Font families to try in order; retain the Emacs font if none is installed."
   :type '(repeat string) :group 'lazyemacs)
 (defcustom lazyemacs-font-height 140
