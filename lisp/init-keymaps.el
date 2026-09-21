@@ -8,8 +8,6 @@
 
 ;;; Code:
 
-(declare-function flycheck-display-error-at-point "flycheck" ())
-
 ;;; Leader groups
 
 (defvar my/leader-buffer-map nil "Buffer commands.")
@@ -29,7 +27,7 @@
       (define-keymap
        :prefix 'my/leader-code-prefix
        "a" #'my/lsp-code-actions
-       "d" #'flycheck-display-error-at-point
+       "d" #'my/show-diagnostic-at-point
        "f" #'my/format-buffer
        "l" #'lsp-describe-session
        "o" #'my/lsp-organize-imports

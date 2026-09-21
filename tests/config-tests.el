@@ -263,5 +263,64 @@
       (execute-kbd-macro (kbd "d S RET"))
       (should (equal (buffer-string) "function (a: string) { return a; }\n")))))
 
+(ert-deftest my/popup-first-display-and-reopen-use-evil ()
+  (let ((buffer (generate-new-buffer "*Warnings*<evil-popup-test>"))
+        (popper-group-function nil)
+        (popper-open-popup-alist nil)
+        (popper-buried-popup-alist nil))
+    (unwind-protect
+        (save-window-excursion
+          (with-current-buffer buffer
+            (insert "alpha beta\nsecond line\nthird line\n")
+            (special-mode)
+            (evil-local-mode 1)
+            (evil-emacs-state))
+          ;; Exercise the real display-buffer rule, not just the hook helper.
+          (let ((window (display-buffer buffer)))
+            (should (window-live-p window))
+            (with-selected-window window
+              (should (eq evil-state 'normal))
+              (goto-char (point-min))
+              (execute-kbd-macro (kbd "w j"))
+              (should (= (line-number-at-pos) 2))
+              (should (eq (key-binding (kbd "C-h")) #'windmove-left))))
+          (popper--update-popups)
+          (popper-close-latest)
+          (with-current-buffer buffer (evil-emacs-state))
+          (popper-open-latest)
+          (with-current-buffer buffer
+            (should (eq evil-state 'normal))
+            (should (eq (key-binding (kbd "w")) #'evil-forward-word-begin))))
+      (when (buffer-live-p buffer) (kill-buffer buffer)))))
+
+(ert-deftest my/popup-preserves-interactive-shell-input ()
+  (require 'comint)
+  (with-temp-buffer
+    (comint-mode)
+    (evil-local-mode 1)
+    (evil-insert-state)
+    (my/popper-evil-normal-state)
+    (should (eq evil-state 'insert))))
+
+(ert-deftest my/diagnostics-are-explicit-and-do-not-feed-eldoc ()
+  (require 'flycheck)
+  (with-temp-buffer
+    (let* ((flycheck-mode t)
+           (error (flycheck-error-new-at 1 1 'error "Example diagnostic"))
+           automatic-docs explicit-errors)
+      (should-not flycheck-display-errors-function)
+      (cl-letf (((symbol-function 'flycheck-overlay-errors-at)
+                 (lambda (&rest _) (list error)))
+                ((symbol-function 'flycheck-display-error-messages)
+                 (lambda (errors) (setq explicit-errors errors))))
+        ;; The idle provider must stay silent even with an error at point.
+        (flycheck-eldoc-function (lambda (&rest docs) (setq automatic-docs docs)))
+        (flycheck-display-error-at-point)
+        (should-not automatic-docs)
+        (should-not explicit-errors)
+        (my/show-diagnostic-at-point)
+        (should (equal explicit-errors (list error)))
+        (should-not flycheck-display-errors-function)))))
+
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit)

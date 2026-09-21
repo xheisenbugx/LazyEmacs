@@ -33,9 +33,11 @@
 ;; C-` toggles the latest popup, so these buffers stay close without taking
 ;; permanent space from code windows.
 (defun my/popper-evil-normal-state ()
-  "Enable Evil Normal state in the current popup buffer."
-  (evil-local-mode 1)
-  (evil-normal-state))
+  "Enable Evil navigation in output popups, preserving interactive input."
+  (unless (or (minibufferp)
+              (derived-mode-p 'comint-mode 'term-mode 'eshell-mode 'ghostel-mode))
+    (evil-local-mode 1)
+    (evil-normal-state)))
 
 (defun my/popper-display-popup (buffer &optional alist)
   "Display BUFFER with ALIST and enter Evil Normal state."
@@ -57,6 +59,7 @@
      helpful-mode
      compilation-mode
      flycheck-error-list-mode))
+  (popper-display-function #'my/popper-display-popup)
   (popper-window-height 0.33)
   :config
   (popper-mode 1)

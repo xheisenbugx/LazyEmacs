@@ -78,6 +78,10 @@ shortcut (`jc`/`jw`). Flash remains the primary labeled jump system.
 | `SPC uf` / `SPC uF` | Global/buffer format-on-save |
 | `SPC ud`, `SPC uh` | Toggle diagnostics/inlay hints |
 
+Errors do not automatically appear in Eldoc when point moves over them.
+Underlines and diagnostic lists remain active; `SPC cd` explicitly shows the
+message in the echo area. `K` continues to show symbol documentation.
+
 New LSP navigation checks server capabilities. `gd` still falls back to xref in
 unmanaged buffers. Code navigation records Evil jumps for `C-o`/`C-i`.
 `C-c L` is lsp-mode's full command map; manual start/restart/shutdown are also
@@ -141,7 +145,10 @@ independent shells. Removed duplicate terminal keys include `SPC te/ts/tt/tp/tn`
 `SPC pe/pt/pT`, and `C-x p e/s`; `SPC t` is now exclusively tests.
 
 Ghostel is the only shell frontend. Popper (``C-` ``, ``M-` ``, ``C-M-` ``) manages
-help, warnings, and compilation popups, not a second terminal system.
+help, warnings, and compilation popups, not a second terminal system. Output
+popups enter Evil Normal state on first display and when reopened, so motions
+like `h/j/k/l`, `w/b`, `gg/G`, and `/` work immediately. Interactive shell and
+minibuffer input retain their own controls.
 
 ## Tasks and focused tests
 
