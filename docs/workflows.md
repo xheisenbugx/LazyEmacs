@@ -248,17 +248,38 @@ Use `]q` / `[q` in Normal state to visit the next/previous result with
 `next-error` / `previous-error`, including Embark-exported grep/Occur results
 and compilation output.
 
-In buffers with an active native tree-sitter parser:
+[evil-textobj-plus](https://github.com/xheisenbugx/evil-textobj-plus) supplies
+mini.ai-style nearby objects. Combine `i`/`a` with an object in Visual state or
+after `d`, `c`, or `y`; normal-state Flash motions and `C-h/j/k/l` are unchanged.
 
-- `vaf` selects a function; `cif` changes its body.
-- `via` selects an argument; `daa` deletes it with an adjacent comma.
-- `]m` / `[m` move through function starts, including nested functions.
-- `za` toggles the surrounding structural block. Search or edits reveal it.
+| Example | Action |
+| --- | --- |
+| `ciq` | Change inside a nearby quoted string |
+| `vab` then `ab` | Select any bracket pair, then expand outward |
+| `d2ab` | Delete the second enclosing bracket object |
+| `din)` / `dil)` | Delete inside the next / previous parentheses |
+| `viF` / `vaF` | Select call arguments / the whole function call |
+| `via` / `daa` | Select an argument / delete it and an adjacent comma |
+| `vit` / `vat` | Select tag contents / balanced named tag |
+| `g[b` / `g]b` | Move to the first / last character of the bracket object |
 
-These use the native parser directly, with no second tree-sitter package.
-Install TypeScript/TSX grammars to enable these workflows. Other languages need
-an installed grammar and their corresponding `*-ts-mode`; unsupported buffers
-report this requirement. Folding falls back to Hideshow without a parser.
+`(`, `[`, `{`, `<` trim inner whitespace; their closing counterparts preserve
+it. `b` groups parentheses/brackets/braces; `q` groups quote types. Native word,
+paragraph and other unmodified Evil text objects remain available. Counts and
+`.` repeat work with the new objects. Search covers at most 50 lines each way;
+change `evil-textobj-plus-lines` or provide custom regexp/Tree-sitter objects
+through `evil-textobj-plus-custom-objects`. See the package README for details.
+
+With an active native Tree-sitter parser, `vaf` selects a function definition
+and `cif` changes its body. This preserves our existing LazyVim mapping; upstream
+mini.ai uses `f` for calls, which this config puts on `F`. Arguments use the
+parser when available and syntax-based matching otherwise. `]m` / `[m` move
+through function starts; `za` folds the surrounding block (Hideshow fallback).
+
+Install the appropriate language grammar and use its `*-ts-mode` for structural
+objects. Function definitions require a parser. Syntax-based calls, quotes and
+tags are intentionally heuristic; use custom Tree-sitter providers for language
+constructs such as template strings or HTML with implicit closing tags.
 
 ## Responsiveness defaults
 

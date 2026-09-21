@@ -239,8 +239,9 @@ in batch mode. Optional executable discovery does not install external tools.
 
 ## Packages and updates
 
-GNU ELPA has priority over NonGNU ELPA, which has priority over MELPA. Flash and
-project-tab-sessions are fetched from GitHub using package-vc. The declarations
+GNU ELPA has priority over NonGNU ELPA, which has priority over MELPA. Flash,
+project-tab-sessions, and evil-textobj-plus are fetched from GitHub using
+package-vc. The declarations
 in `lisp/` define the package set; a personal `package-selected-packages` list
 is not required. GitHub dependencies currently follow upstream revisions.
 

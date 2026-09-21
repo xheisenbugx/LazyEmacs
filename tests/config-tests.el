@@ -13,18 +13,44 @@
 (ert-deftest my/structure-function-and-argument-objects ()
   (my/test-typescript "function example(a: string, b: number) {\n  return call(a, b);\n}\n"
 		      (search-forward "return")
-		      (let ((bounds (my/treesit-function-bounds nil)))
+		      (let ((bounds (evil-textobj-plus-find ?f nil 1 'cover)))
 			(should (string-prefix-p "function example" (buffer-substring (car bounds) (cdr bounds)))))
-		      (let ((bounds (my/treesit-function-bounds t)))
+		      (let ((bounds (evil-textobj-plus-find ?f t 1 'cover)))
 			(should (equal (string-trim (buffer-substring (car bounds) (cdr bounds))) "return call(a, b);")))
 		      (search-forward "call(a")
 		      (backward-char)
-		      (let ((bounds (my/treesit-argument-bounds t)))
+		      (let ((bounds (evil-textobj-plus-find ?a nil 1 'cover)))
 			(should (equal (buffer-substring (car bounds) (cdr bounds)) "a, ")))
 		      (search-forward "b")
 		      (backward-char)
-		      (let ((bounds (my/treesit-argument-bounds t)))
+		      (let ((bounds (evil-textobj-plus-find ?a nil 1 'cover)))
 			(should (equal (buffer-substring (car bounds) (cdr bounds)) ", b")))))
+
+(ert-deftest my/textobj-plus-preserves-function-and-call-mappings ()
+  (my/test-typescript "function outer(a: string, b: number) { return call(a, b); }"
+    (save-window-excursion
+      (switch-to-buffer (current-buffer))
+      (evil-local-mode 1) (evil-normal-state)
+      (search-forward "return")
+      (execute-kbd-macro (kbd "vaf"))
+      (should (string-prefix-p "function outer"
+                               (buffer-substring evil-visual-beginning evil-visual-end)))
+      (evil-normal-state)
+      (goto-char (point-min)) (search-forward "call(a") (backward-char)
+      (execute-kbd-macro (kbd "viF"))
+      (should (equal (buffer-substring evil-visual-beginning evil-visual-end) "a, b")))))
+
+(ert-deftest my/textobj-plus-nearby-operators-without-parser ()
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (insert "before (one) after (two)")
+    (save-window-excursion
+      (switch-to-buffer (current-buffer))
+      (goto-char (point-min)) (evil-local-mode 1) (evil-normal-state)
+      (execute-kbd-macro (kbd "di)"))
+      (should (equal (buffer-string) "before () after (two)"))
+      (execute-kbd-macro (kbd "din)"))
+      (should (equal (buffer-string) "before () after ()")))))
 
 (ert-deftest my/structure-nested-functions-and-folds ()
   (my/test-typescript "function outer() {\n const inner = () => {\n return 1;\n };\n}\nfunction last() {}"
@@ -42,7 +68,7 @@
 		      (should-not (overlays-in (point-min) (point-max)))))
 
 (ert-deftest my/structure-without-parser-explains-requirement ()
-  (with-temp-buffer (should-error (my/treesit-function-bounds t) :type 'user-error)))
+  (with-temp-buffer (should-error (evil-textobj-plus-find ?f t 1 'cover) :type 'user-error)))
 
 (ert-deftest my/keybindings-preserve-navigation-and-share-cursor-engine ()
   (with-temp-buffer
