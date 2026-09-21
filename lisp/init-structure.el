@@ -2,7 +2,7 @@
 
 ;;; Commentary:
 ;; Evil operators use the same native parsers as syntax highlighting.
-;; Function and argument objects are intentionally small and grammar-aware.
+;; evil-textobj-plus owns text objects; local code supplies motions and folds.
 
 ;;; Code:
 (require 'treesit)
@@ -13,8 +13,6 @@
   '("function_declaration" "function_definition" "function_expression"
     "generator_function_declaration" "generator_function" "arrow_function"
     "method_definition" "method_declaration" "function_item"))
-(defconst my/treesit-argument-list-types
-  '("arguments" "argument_list" "formal_parameters" "parameters"))
 
 (defun my/treesit-node ()
   "Return the syntax node at point, requiring an active native parser."
@@ -28,69 +26,18 @@
     (setq node (treesit-node-parent node)))
   node)
 
-(defun my/treesit-function-bounds (inner)
-  "Return function bounds, or body bounds when INNER is non-nil."
-  (let* ((node (or (my/treesit-ancestor (my/treesit-node) my/treesit-function-types)
-                   (user-error "No function at point")))
-         (body (if inner
-                   (or (treesit-node-child-by-field-name node "body")
-                       (user-error "This function has no body"))
-                 node))
-         (beg (treesit-node-start body))
-         (end (treesit-node-end body)))
-    ;; Block bodies contain braces; expression bodies and Python blocks don't.
-    (when (and inner (eq (char-after beg) ?{) (eq (char-before end) ?}))
-      (setq beg (1+ beg) end (1- end)))
-    (cons beg end)))
-
-(defun my/treesit-argument-bounds (outer)
-  "Return argument bounds, including one adjacent comma when OUTER."
-  (let* ((origin (point))
-         (list-node (or (my/treesit-ancestor (my/treesit-node)
-                                             my/treesit-argument-list-types)
-                        (user-error "No argument or parameter list at point")))
-         (children (seq-remove
-                    (lambda (node) (equal (treesit-node-type node) "comment"))
-                    (treesit-node-children list-node t)))
-         (node (or (seq-find (lambda (child)
-                               (and (<= (treesit-node-start child) origin)
-                                    (< origin (treesit-node-end child)))) children)
-                   (seq-find (lambda (child) (>= (treesit-node-start child) origin)) children)
-                   (car (last children)))))
-    (unless node (user-error "The argument list is empty"))
-    (let ((beg (treesit-node-start node)) (end (treesit-node-end node)))
-      (when outer
-        (save-excursion
-          (goto-char end)
-          (skip-chars-forward " \t\n")
-          (if (eq (char-after) ?,)
-              (progn (forward-char) (skip-chars-forward " \t\n") (setq end (point)))
-            (goto-char beg)
-            (skip-chars-backward " \t\n")
-            (when (eq (char-before) ?,) (setq beg (1- (point)))))))
-      (cons beg end))))
-
-(evil-define-text-object my/evil-inner-function (_count &optional _beg _end _type)
-			 "Select the function body."
-			 (let ((bounds (my/treesit-function-bounds t)))
-			   (evil-range (car bounds) (cdr bounds) 'exclusive)))
-(evil-define-text-object my/evil-a-function (_count &optional _beg _end _type)
-			 "Select the whole function."
-			 (let ((bounds (my/treesit-function-bounds nil)))
-			   (evil-range (car bounds) (cdr bounds) 'exclusive)))
-(evil-define-text-object my/evil-inner-argument (_count &optional _beg _end _type)
-			 "Select the current argument."
-			 (let ((bounds (my/treesit-argument-bounds nil)))
-			   (evil-range (car bounds) (cdr bounds) 'exclusive)))
-(evil-define-text-object my/evil-an-argument (_count &optional _beg _end _type)
-			 "Select an argument and its adjacent comma."
-			 (let ((bounds (my/treesit-argument-bounds t)))
-			   (evil-range (car bounds) (cdr bounds) 'exclusive)))
-
-(define-key evil-inner-text-objects-map "f" #'my/evil-inner-function)
-(define-key evil-outer-text-objects-map "f" #'my/evil-a-function)
-(define-key evil-inner-text-objects-map "a" #'my/evil-inner-argument)
-(define-key evil-outer-text-objects-map "a" #'my/evil-an-argument)
+(use-package evil-textobj-plus
+  :vc (:url "https://github.com/xheisenbugx/evil-textobj-plus" :rev :newest)
+  :demand t
+  :custom
+  (evil-textobj-plus-lines 500)
+  :config
+  ;; Preserve LazyVim's definition/body objects; F selects a function call.
+  (setq-default evil-textobj-plus-custom-objects
+                `((?f . ,(evil-textobj-plus-treesit my/treesit-function-types "body"))
+                  (?F . evil-textobj-plus-calls)
+                  (?a . evil-textobj-plus-treesit-arguments)))
+  (evil-textobj-plus-mode 1))
 
 (defun my/treesit-function-positions (root)
   "Collect nested function start positions below ROOT."
