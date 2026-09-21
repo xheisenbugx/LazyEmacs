@@ -47,10 +47,7 @@
   (avy-all-windows t))
 
 (use-package move-text
-  :demand t
-  :config
-  ;; M-up and M-down move the active region or current line.
-  (move-text-default-bindings))
+  :commands (move-text-up move-text-down))
 
 (use-package crux
   :commands

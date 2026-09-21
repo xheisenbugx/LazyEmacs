@@ -5,7 +5,9 @@
   (setq user-emacs-directory (file-name-as-directory state)
         package-user-dir (expand-file-name "elpa" root))
   (setenv "LAZYEMACS_USER_DIR" (expand-file-name "user" state))
-  (setq treesit-extra-load-path (list (expand-file-name "tree-sitter" root)))
+  (setq treesit-extra-load-path
+        (list (expand-file-name "var/treesit" root)
+              (expand-file-name "tree-sitter" root)))
   (load (expand-file-name "early-init.el" root) nil t)
   (load (expand-file-name "init.el" root) nil t)
   (unless (and make-backup-files auto-save-default create-lockfiles

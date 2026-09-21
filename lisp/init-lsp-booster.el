@@ -46,7 +46,7 @@ language-server command instead of the wrapper."
         (progn
           ;; Resolve the server explicitly because a graphical Emacs may have
           ;; a richer `exec-path' than the PATH inherited by child processes.
-          (when-let ((server (executable-find (car resolved-command))))
+          (when-let* ((server (executable-find (car resolved-command))))
             (setcar resolved-command server))
           (cons (executable-find "emacs-lsp-booster") resolved-command))
       resolved-command)))

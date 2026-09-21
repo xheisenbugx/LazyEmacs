@@ -225,12 +225,113 @@ Consult preview responsive."
   (interactive)
   (call-interactively #'lsp-find-references))
 
+(defun my/lsp-require-feature (method)
+  "Require an attached server supporting METHOD."
+  (require 'lsp-mode)
+  (unless (and (bound-and-true-p lsp-managed-mode) (lsp-feature? method))
+    (user-error "The current LSP server does not support %s" method)))
+
+(defun my/lsp-find-type-definition ()
+  "Find the type definition at point."
+  (interactive)
+  (my/lsp-require-feature "textDocument/typeDefinition")
+  (call-interactively #'lsp-find-type-definition))
+
+(defun my/lsp-find-declaration ()
+  "Find the declaration at point."
+  (interactive)
+  (my/lsp-require-feature "textDocument/declaration")
+  (call-interactively #'lsp-find-declaration))
+
+(defun my/lsp-signature-help ()
+  "Show signature help without taking over Ctrl-K window navigation."
+  (interactive)
+  (my/lsp-require-feature "textDocument/signatureHelp")
+  (lsp-signature-activate))
+
+(defun my/lsp-toggle-inlay-hints ()
+  "Toggle inlay hints in the current managed buffer."
+  (interactive)
+  (my/lsp-require-feature "textDocument/inlayHint")
+  (lsp-inlay-hints-mode 'toggle))
+
+(defun my/lsp-call-hierarchy (outgoing)
+  "Pick incoming callers, or callees when OUTGOING is non-nil."
+  ;; lsp-mode names the capability callHierarchy; the wire request uses prepare.
+  (my/lsp-require-feature "textDocument/callHierarchy")
+  (let* ((items (lsp-request "textDocument/prepareCallHierarchy"
+                             (lsp--text-document-position-params)))
+         (choices (seq-map-indexed
+                   (lambda (item index)
+                     (cons (format "%d: %s" (1+ index) (plist-get item :name)) item))
+                   items))
+         (item (cond ((null choices) (user-error "No callable symbol at point"))
+                     ((null (cdr choices)) (cdar choices))
+                     (t (cdr (assoc (completing-read "Symbol: " choices nil t) choices)))))
+         (calls (lsp-request (if outgoing "callHierarchy/outgoingCalls"
+                              "callHierarchy/incomingCalls")
+                            (list :item item)))
+         (locations (seq-map
+                     (lambda (call)
+                       (let ((target (plist-get call (if outgoing :to :from))))
+                         (list :uri (plist-get target :uri)
+                               :range (plist-get target :selectionRange)))) calls))
+         (xrefs (lsp--locations-to-xref-items locations)))
+    (unless xrefs (user-error "No %s calls" (if outgoing "outgoing" "incoming")))
+    (xref-show-xrefs (lambda () xrefs) nil)))
+
+(defun my/lsp-incoming-calls ()
+  "Find callers of the symbol at point."
+  (interactive)
+  (my/lsp-call-hierarchy nil))
+
+(defun my/lsp-outgoing-calls ()
+  "Find callees of the symbol at point."
+  (interactive)
+  (my/lsp-call-hierarchy t))
+
+(defun my/diagnostic-next-level (level count)
+  "Visit COUNT diagnostics of exactly LEVEL in the current buffer."
+  (require 'flycheck)
+  (let* ((positions (sort
+                     (delete-dups
+                      (mapcar #'flycheck-error-pos
+                              (seq-filter (lambda (error)
+                                            (eq (flycheck-error-level error) level))
+                                          flycheck-current-errors))) #'<))
+         (candidates (if (< count 0)
+                         (reverse (seq-filter (lambda (p) (< p (point))) positions))
+                       (seq-filter (lambda (p) (> p (point))) positions)))
+         (target (nth (1- (abs count)) candidates)))
+    (unless target (user-error "No more %s diagnostics" level))
+    (goto-char target)
+    (flycheck-display-error-at-point)))
+
+(defun my/next-error-diagnostic (count)
+  "Move forward COUNT error diagnostics."
+  (interactive "p")
+  (my/diagnostic-next-level 'error count))
+(defun my/previous-error-diagnostic (count)
+  "Move backward COUNT error diagnostics."
+  (interactive "p")
+  (my/diagnostic-next-level 'error (- count)))
+(defun my/next-warning-diagnostic (count)
+  "Move forward COUNT warning diagnostics."
+  (interactive "p")
+  (my/diagnostic-next-level 'warning count))
+(defun my/previous-warning-diagnostic (count)
+  "Move backward COUNT warning diagnostics."
+  (interactive "p")
+  (my/diagnostic-next-level 'warning (- count)))
+
 ;; Evil checks the outer command before it runs.  These wrappers must carry
 ;; their own jump property so C-o can return even after a same-file LSP jump.
 (with-eval-after-load 'evil
   (dolist (command '(my/lsp-find-definitions
                      my/lsp-find-implementations
-                     my/lsp-find-references))
+                     my/lsp-find-references
+                     my/lsp-find-type-definition my/lsp-find-declaration
+                     my/lsp-incoming-calls my/lsp-outgoing-calls))
     (evil-set-command-property command :jump t)))
 
 (defun my/lsp-diagnostics ()
@@ -427,18 +528,33 @@ Otherwise retain Apheleia's mode defaults.  Use directory-local
                    (locate-dominating-file default-directory "biome.jsonc")))
       (setq-local apheleia-formatter 'biome))))
 
-(defun my/format-buffer ()
-  "Format now independently of whether format-on-save is enabled."
+(defun my/format-buffer (&optional beg end)
+  "Format the buffer, or the region BEG to END without formatting outside it."
+  (interactive (when (use-region-p) (list (region-beginning) (region-end))))
+  (if (and beg end)
+      (progn
+        (when (and (bound-and-true-p evil-visual-state-minor-mode)
+                   (eq evil-visual-selection 'block))
+          (user-error "Select a contiguous region for range formatting"))
+        (unless (and (bound-and-true-p lsp-managed-mode)
+                     (lsp-feature? "textDocument/rangeFormatting"))
+          (user-error "Range formatting needs a supporting LSP server; use = to indent"))
+        (lsp-format-region beg end))
+    (require 'apheleia)
+    (my/project-formatter)
+    (if-let* ((formatters (apheleia--get-formatters)))
+        (apheleia-format-buffer formatters)
+      (if (and (bound-and-true-p lsp-managed-mode)
+               (lsp-feature? "textDocument/formatting"))
+          (lsp-format-buffer)
+        (indent-region (point-min) (point-max))))))
+
+(defun my/toggle-global-format-on-save ()
+  "Toggle format-on-save across eligible buffers, including future buffers."
   (interactive)
   (require 'apheleia)
-  (my/project-formatter)
-  (if-let ((formatters (apheleia--get-formatters)))
-      (apheleia-format-buffer formatters)
-    (if (and (bound-and-true-p lsp-mode)
-             (lsp-feature? "textDocument/formatting"))
-        (lsp-format-buffer)
-      (indent-region (if (use-region-p) (region-beginning) (point-min))
-                     (if (use-region-p) (region-end) (point-max))))))
+  (apheleia-global-mode (if (bound-and-true-p apheleia-global-mode) -1 1))
+  (message "Global format on save %s" (if apheleia-global-mode "enabled" "disabled")))
 
 (defun my/toggle-format-on-save ()
   "Toggle Apheleia's format-on-save behavior in the current buffer."

@@ -94,7 +94,7 @@
 
   ;; Dirvish's rich listing works best with GNU ls.  Homebrew exposes it as
   ;; `gls' on macOS; other platforms retain their normal Dired program.
-  (when-let ((gls (executable-find "gls")))
+  (when-let* ((gls (executable-find "gls")))
     (setq insert-directory-program gls
           dired-use-ls-dired t))
   (when (or (executable-find "gls")
@@ -119,7 +119,7 @@
   :init
   ;; NonGNU ELPA keeps optional extensions in a subdirectory that package.el
   ;; does not add to `load-path' automatically.
-  (when-let ((library (locate-library "dirvish")))
+  (when-let* ((library (locate-library "dirvish")))
     (add-to-list 'load-path
                  (expand-file-name "extensions/"
                                    (file-name-directory library))))
@@ -147,6 +147,42 @@
   :hook
   ((dired-mode . diredfl-mode)
    (dirvish-directory-view-mode . diredfl-mode)))
+
+(defun my/new-file ()
+  "Create an unnamed buffer; saving prompts for a file name."
+  (interactive)
+  (switch-to-buffer (generate-new-buffer "untitled"))
+  (funcall (default-value 'major-mode)))
+
+(defun my/scratch-toggle ()
+  "Switch to scratch, or back to the previous buffer."
+  (interactive)
+  (if (equal (buffer-name) "*scratch*")
+      (switch-to-buffer (other-buffer))
+    (switch-to-buffer (get-scratch-buffer-create))))
+
+(defun my/kill-other-file-buffers (&optional invisible-only)
+  "Kill other file buffers, optionally only those INVISIBLE-ONLY.
+Preserve special buffers and processes.  Modified files retain kill prompts."
+  (interactive)
+  (let ((current (current-buffer)))
+    (dolist (buffer (buffer-list))
+      (when (and (not (eq buffer current))
+                 (buffer-local-value 'buffer-file-name buffer)
+                 (not (get-buffer-process buffer))
+                 (or (not invisible-only) (not (get-buffer-window buffer t))))
+        (kill-buffer buffer)))))
+
+(defun my/kill-invisible-file-buffers ()
+  "Kill invisible file buffers, preserving the current buffer."
+  (interactive)
+  (my/kill-other-file-buffers t))
+
+(defun my/kill-buffer-and-window ()
+  "Kill this buffer and close its window, respecting cancellation."
+  (interactive)
+  (when (one-window-p t) (user-error "Cannot close the only window"))
+  (when (kill-buffer (current-buffer)) (delete-window)))
 
 (provide 'init-navigation)
 ;;; init-navigation.el ends here

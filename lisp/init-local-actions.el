@@ -3,6 +3,11 @@
 (require 'evil)
 (require 'general)
 
+(defun my/results-show ()
+  "Show the result buffer used by next-error and previous-error."
+  (interactive)
+  (pop-to-buffer (next-error-find-buffer)))
+
 (defun my/local-actions-editing-p ()
   "Return non-nil in a supported editable results buffer."
   (derived-mode-p 'grep-edit-mode 'occur-edit-mode 'wdired-mode))

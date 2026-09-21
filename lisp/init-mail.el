@@ -52,12 +52,12 @@ to `brew --prefix' on every startup."
               ((file-directory-p directory)))
     directory))
 
-(when-let ((directory (my/mu4e-library-directory)))
+(when-let* ((directory (my/mu4e-library-directory)))
   (add-to-list 'load-path directory))
 
 (defun my/mu4e-index-ready-p ()
   "Return non-nil when the mu database is initialized and readable."
-  (when-let ((mu (executable-find "mu")))
+  (when-let* ((mu (executable-find "mu")))
     (eq 0 (call-process mu nil nil nil "info"))))
 
 (defun my/mu4e-initialize-index ()

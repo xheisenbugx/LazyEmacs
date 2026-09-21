@@ -136,13 +136,72 @@
   ;; `consult--default-completion-list-preview-setup', automatically.
   (remove-hook 'embark-collect-mode-hook #'consult-preview-at-point-mode))
 
-;; Export a Consult grep result with `embark-export', then press C-x C-q to edit
-;; matches across files and C-c C-c to apply them.
-(use-package wgrep
-  :commands wgrep-change-to-wgrep-mode
-  :custom
-  (wgrep-auto-save-buffer t)
-  (wgrep-change-readonly-file t))
+(defun my/find-file-cwd ()
+  "Pick a file under the current directory, without switching to project root."
+  (interactive)
+  (funcall (if (executable-find "fd") #'consult-fd #'consult-find) default-directory))
+
+(defun my/recent-files-cwd ()
+  "Pick a recent file under the current directory."
+  (interactive)
+  (let* ((directory default-directory)
+         (recentf-list (seq-filter (lambda (file) (file-in-directory-p file directory))
+                                   recentf-list)))
+    (consult-recent-file)))
+
+(defun my/search-cwd ()
+  "Search text under the current directory."
+  (interactive)
+  (consult-ripgrep default-directory))
+
+(defun my/search-open-buffers ()
+  "Search lines across all open buffers."
+  (interactive)
+  (consult-line-multi t))
+
+(defun my/search-text-at-point ()
+  "Return the selected text or symbol, requiring a single line."
+  (let ((text (if (use-region-p)
+                  (buffer-substring-no-properties (region-beginning) (region-end))
+                (thing-at-point 'symbol t))))
+    (unless (and text (not (string-empty-p text)))
+      (user-error "Select text or place point on a symbol"))
+    (when (string-match-p "\n" text)
+      (user-error "Select a single line for this search"))
+    text))
+
+(defun my/search-word (&optional cwd)
+  "Search the selected text or symbol literally; with CWD use current directory."
+  (interactive)
+  (let* ((text (my/search-text-at-point))
+         (consult-ripgrep-args
+          (if (stringp consult-ripgrep-args)
+              (concat consult-ripgrep-args " --fixed-strings")
+            (append consult-ripgrep-args '("--fixed-strings")))))
+    (consult-ripgrep (and cwd default-directory) text)))
+
+(defun my/search-word-cwd ()
+  "Search selected text or symbol literally in the current directory."
+  (interactive)
+  (my/search-word t))
+
+(defun my/search-replace-edit-export ()
+  "Enter native editing in a newly exported grep buffer."
+  (when (derived-mode-p 'grep-mode) (my/local-actions-edit)))
+
+(defun my/search-replace ()
+  "Search the project, then press RET to export editable grep results.
+Edits update source buffers; finish with backslash c and save files explicitly."
+  (interactive)
+  (let ((embark-after-export-hook
+         (cons #'my/search-replace-edit-export embark-after-export-hook))
+        ;; Vertico installs its map after minibuffer setup starts.  Bind the
+        ;; map itself so its normal RET cannot replace the export action.
+        (vertico-map
+         (make-composed-keymap
+          (define-keymap "RET" #'embark-export "<return>" #'embark-export)
+          vertico-map)))
+    (consult-ripgrep)))
 
 ;;; In-buffer completion
 
