@@ -20,7 +20,11 @@
   (setq command-line-args-left (delete "--grammars" command-line-args-left))
   (when (equal (getenv "LAZYEMACS_OFFLINE") "1")
     (error "Unset LAZYEMACS_OFFLINE to bootstrap; installation needs the network"))
-  (setq user-emacs-directory root)
+  ;; package.el computed its directories from the default init directory
+  ;; before this script ran; point every one of them at the checkout.
+  (setq user-emacs-directory root
+        package-user-dir (expand-file-name "elpa" root)
+        package-gnupghome-dir (expand-file-name "elpa/gnupg" root))
   (message "Installing LazyEmacs packages into %selpa/ ..." root)
   (load (expand-file-name "early-init.el" root) nil t)
   (load (expand-file-name "init.el" root) nil t)
