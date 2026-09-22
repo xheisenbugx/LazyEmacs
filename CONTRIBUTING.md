@@ -11,7 +11,8 @@ project identity, and tab-owned terminal behavior. Add focused behavioral tests
 for startup or workflow changes. Document new external dependencies and user
 options in README.md and update examples when appropriate.
 
-Run the offline and integration commands in README.md. Report the actual Emacs
+Run `python3 scripts/test.py` for all suites, or pass `--offline-only` for the
+package-free checks. Tests refuse package downloads and upgrades. Report the actual Emacs
 version, OS, package/grammar prerequisites, checks performed, skipped checks,
 and whether first installation or only existing packages were tested. A local
 batch pass does not establish graphical, cross-platform, or network-bootstrap

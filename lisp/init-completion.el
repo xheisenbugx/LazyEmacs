@@ -82,7 +82,8 @@
   "Find a file with fd when available, otherwise use POSIX find."
   (interactive)
   (call-interactively
-   (if (executable-find "fd") #'consult-fd #'consult-find)))
+   (if (or (executable-find "fd") (executable-find "fdfind"))
+       #'consult-fd #'consult-find)))
 
 (use-package consult
   :demand t
@@ -139,7 +140,8 @@
 (defun my/find-file-cwd ()
   "Pick a file under the current directory, without switching to project root."
   (interactive)
-  (funcall (if (executable-find "fd") #'consult-fd #'consult-find) default-directory))
+  (funcall (if (or (executable-find "fd") (executable-find "fdfind"))
+               #'consult-fd #'consult-find) default-directory))
 
 (defun my/recent-files-cwd ()
   "Pick a recent file under the current directory."

@@ -1,66 +1,39 @@
-;;; init-lsp-booster.el --- Accelerate local lsp-mode servers -*- lexical-binding: t; -*-
-
+;;; init-lsp-booster.el --- Buffered local LSP transport -*- lexical-binding: t; -*-
 ;;; Commentary:
-;; emacs-lsp-booster sits between Emacs and a local stdio language server.  It
-;; parses JSON outside Emacs, converts responses into quickly readable Emacs
-;; bytecode, and buffers reads and writes on separate threads.  The integration
-;; is deliberately conditional: remote and network-based servers keep their
-;; normal commands, and lsp-mode works normally when the executable is absent.
-
+;; Keep the booster's separate I/O threads, using ordinary JSON responses.
+;; A global JSON decoder must never read or execute Lisp from unrelated data.
 ;;; Code:
 
 (defgroup my/lsp-booster nil
-  "Faster transport and decoding for local lsp-mode servers."
+  "Buffered transport for local lsp-mode servers."
   :group 'my/development)
 
 (defcustom my/lsp-booster-enabled t
-  "Whether to use emacs-lsp-booster when its executable is available.
+  "Use emacs-lsp-booster for local stdio servers when installed.
+Bytecode conversion is disabled; Emacs parses ordinary JSON.  Restart Emacs
+when migrating from the old bytecode integration, and restart an LSP
+workspace after changing this option."
+  :type 'boolean :group 'my/lsp-booster)
 
-The booster is used only for local, standard-input/output language servers and
-only with lsp-mode's plist protocol representation.  Restart an LSP workspace
-after changing this option."
-  :type 'boolean
-  :group 'my/lsp-booster)
+(defun my/lsp-booster--resolve-command (original-function command &optional test-p)
+  "Wrap ORIGINAL-FUNCTION's resolved COMMAND except during TEST-P probes."
+  (let ((resolved (funcall original-function command test-p)))
+    (if-let* ((_ (and my/lsp-booster-enabled (not test-p)
+                     (not (file-remote-p default-directory))
+                     (not (fboundp 'json-rpc-connection))
+                     (consp resolved) (stringp (car resolved))))
+              (booster (executable-find "emacs-lsp-booster")))
+        ;; Do not mutate lsp-mode's original command list.
+        (append (list booster "--disable-bytecode" "--"
+                      (or (executable-find (car resolved)) (car resolved)))
+                (cdr resolved))
+      resolved)))
 
-(defun my/lsp-booster--parse-bytecode (original-function &rest arguments)
-  "Decode booster bytecode, otherwise call ORIGINAL-FUNCTION with ARGUMENTS."
-  (or (when (eq (following-char) ?#)
-        (let ((bytecode (read (current-buffer))))
-          (when (byte-code-function-p bytecode)
-            (funcall bytecode))))
-      (apply original-function arguments)))
-
-(defun my/lsp-booster--resolve-command (original-function command
-                                                          &optional test-p)
-  "Wrap the command returned by ORIGINAL-FUNCTION for COMMAND.
-
-TEST-P is lsp-mode's executable-presence check; it must see the original
-language-server command instead of the wrapper."
-  (let ((resolved-command (funcall original-function command test-p)))
-    (if (and my/lsp-booster-enabled
-             (not test-p)
-             (not (file-remote-p default-directory))
-             lsp-use-plists
-             (not (fboundp 'json-rpc-connection))
-             (executable-find "emacs-lsp-booster"))
-        (progn
-          ;; Resolve the server explicitly because a graphical Emacs may have
-          ;; a richer `exec-path' than the PATH inherited by child processes.
-          (when-let* ((server (executable-find (car resolved-command))))
-            (setcar resolved-command server))
-          (cons (executable-find "emacs-lsp-booster") resolved-command))
-      resolved-command)))
-
-;; The decoder must be installed before the first boosted response arrives.
-;; Advice is idempotent, which also makes evaluating this module again safe.
-(unless (advice-member-p #'my/lsp-booster--parse-bytecode 'json-parse-buffer)
-  (advice-add 'json-parse-buffer :around #'my/lsp-booster--parse-bytecode))
-
+;; Remove the old global decoder when this module is explicitly reloaded.
+;; Existing bytecode-producing servers must be stopped before doing so.
+(advice-remove 'json-parse-buffer 'my/lsp-booster--parse-bytecode)
 (with-eval-after-load 'lsp-mode
-  (unless (advice-member-p #'my/lsp-booster--resolve-command
-                           'lsp-resolve-final-command)
-    (advice-add 'lsp-resolve-final-command
-                :around #'my/lsp-booster--resolve-command)))
+  (advice-add 'lsp-resolve-final-command :around #'my/lsp-booster--resolve-command))
 
 (provide 'init-lsp-booster)
 ;;; init-lsp-booster.el ends here

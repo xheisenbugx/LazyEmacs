@@ -82,8 +82,9 @@ Errors do not automatically appear in Eldoc when point moves over them.
 Underlines and diagnostic lists remain active; `SPC cd` explicitly shows the
 message in the echo area. `K` continues to show symbol documentation.
 
-New LSP navigation checks server capabilities. `gd` still falls back to xref in
-unmanaged buffers. Code navigation records Evil jumps for `C-o`/`C-i`.
+New LSP navigation checks server capabilities. `gd` and `gr` fall back to xref in
+unmanaged buffers; file symbols fall back to Imenu. The diagnostics toggle
+requires an attached server. Code navigation records Evil jumps for `C-o`/`C-i`.
 `C-c L` is lsp-mode's full command map; manual start/restart/shutdown are also
 available as `M-x my/lsp-start`, `my/lsp-restart`, and `my/lsp-shutdown`.
 
@@ -169,6 +170,12 @@ already be installed. Other frameworks and monorepo package-specific commands
 can use the general task picker, which recognizes package scripts and common
 Python, Go, Rust, and Make tasks.
 
+Python tests use the project's `.venv` interpreter when present, then
+`uv run --frozen --no-sync --no-python-downloads python -m pytest` for uv projects, then
+`python -m pytest` from PATH. Prepare the environment first; this command does
+not synchronize dependencies. Focused tests reject files outside the selected
+project instead of running them with the wrong project's settings.
+
 Commands from `.dir-locals.el` still require Emacs's safe-variable approval;
 opening a project never executes a task. Finite tasks prompt to save modified
 project files before starting compilation-mode. Last command strings persist
@@ -234,7 +241,9 @@ groups, project roots, and layouts. Saved terminals become placeholders where
 `RET` starts a fresh shell. It never recreates previous processes.
 `SPC qs` saves and `SPC ql` restores the complete desktop; `SPC qq` quits.
 `SPC qr` reloads one module, `SPC qf` opens private config, and `SPC qp` upgrades
-packages. Restart after changing startup/package initialization.
+packages. Manual saves refuse another process's desktop lock. Restart after
+changing startup/package initialization or the LSP booster; those modules are
+excluded from live reload.
 
 ## Other retained workflows
 

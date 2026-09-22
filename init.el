@@ -11,44 +11,48 @@
 
 ;;; Code:
 
-(when (version< emacs-version "31.1")
-  (error "LazyEmacs requires Emacs 31.1 or newer (including 31.1 development builds)"))
+(unwind-protect
+    (progn
+      (when (version< emacs-version "31.1")
+        (error "LazyEmacs requires Emacs 31.1 or newer (including 31.1 development builds)"))
 
-(defconst lazyemacs-root-directory
-  (file-name-directory (or load-file-name user-init-file))
-  "Directory containing the LazyEmacs distribution.")
-(defconst my/lisp-directory
-  (expand-file-name "lisp/" lazyemacs-root-directory))
-(add-to-list 'load-path my/lisp-directory)
-(require 'init-distribution)
-(lazyemacs-load-user-file "early.el")
-(require 'init-packages)
-(setq custom-file (expand-file-name "custom.el" lazyemacs-user-directory))
-(load custom-file 'noerror 'nomessage)
+      (defconst lazyemacs-root-directory
+        (file-name-directory (or load-file-name user-init-file))
+        "Directory containing the LazyEmacs distribution.")
+      (defconst my/lisp-directory
+        (expand-file-name "lisp/" lazyemacs-root-directory))
+      (add-to-list 'load-path my/lisp-directory)
+      (require 'init-distribution)
+      (lazyemacs-load-user-file "early.el")
+      (setq custom-file (expand-file-name "custom.el" lazyemacs-user-directory))
+      (load custom-file 'noerror 'nomessage)
+      (require 'init-packages)
 
-;; The load order follows dependencies; keymaps come last because they refer to
-;; commands defined by all preceding feature modules.
-(dolist (feature '(init-core
-                   init-ui
-                   init-completion
-                   init-editing
-                   init-evil
-                   init-navigation
-                   init-vcs
-                   init-structure
-                   init-development
-                   init-lsp-booster
-                   init-tools
-                   init-tasks
-                   init-session
-                   init-org
-                   init-keymaps
-                   init-local-actions))
-  (require feature))
+      ;; The load order follows dependencies; keymaps come last because they refer to
+      ;; commands defined by all preceding feature modules.
+      (dolist (feature '(init-core
+                         init-ui
+                         init-completion
+                         init-editing
+                         init-evil
+                         init-navigation
+                         init-vcs
+                         init-structure
+                         init-development
+                         init-lsp-booster
+                         init-tools
+                         init-tasks
+                         init-session
+                         init-org
+                         init-keymaps
+                         init-local-actions))
+        (require feature))
 
-(when lazyemacs-enable-mail
-  (require 'init-mail))
-(lazyemacs-load-user-file "config.el")
+      (when lazyemacs-enable-mail
+        (require 'init-mail))
+      (lazyemacs-load-user-file "config.el"))
+  (when (fboundp 'my/restore-startup-state)
+    (my/restore-startup-state)))
 
 (provide 'init)
 ;;; init.el ends here

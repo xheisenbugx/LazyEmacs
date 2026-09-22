@@ -2,6 +2,8 @@
 (let* ((root (file-name-directory (directory-file-name (file-name-directory load-file-name))))
        (state (make-temp-file "lazyemacs-check-" t)))
   (setq user-emacs-directory state)
+  (setenv "LAZYEMACS_USER_DIR" (expand-file-name "user" state))
+  (setenv "LAZYEMACS_OFFLINE" "1")
   (add-hook 'kill-emacs-hook (lambda () (delete-directory state t)))
   (dolist (directory '("." "lisp" "examples" "tests" "scripts"))
     (dolist (file (directory-files (expand-file-name directory root) t "\\.el\\'"))

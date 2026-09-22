@@ -54,11 +54,7 @@ for the first time.  `my/lsp-start' remains an immediate manual command."
 ;; roughly 1.5 seconds to `find-file' and therefore to Consult previews too.
 ;; Use the built-in modes directly for grammars that are already installed;
 ;; ordinary major modes remain dependable fallbacks on other machines.
-(when (fboundp 'treesit-language-available-p)
-  (when (treesit-language-available-p 'typescript)
-    (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-ts-mode)))
-  (when (treesit-language-available-p 'tsx)
-    (add-to-list 'auto-mode-alist '("\\.tsx\\'" . tsx-ts-mode))))
+(require 'init-languages)
 
 (use-package markdown-mode
   :mode
@@ -203,9 +199,12 @@ Consult preview responsive."
   (call-interactively #'consult-lsp-symbols))
 
 (defun my/lsp-file-symbols ()
-  "Select an lsp-mode symbol from the current file."
+  "Select file symbols using LSP when attached, otherwise Imenu."
   (interactive)
-  (call-interactively #'consult-lsp-file-symbols))
+  (call-interactively
+   (if (bound-and-true-p lsp-managed-mode)
+       #'consult-lsp-file-symbols
+     #'consult-imenu)))
 
 (defun my/lsp-find-definitions ()
   "Use LSP definitions in managed buffers, otherwise use the xref backend."
@@ -221,9 +220,12 @@ Consult preview responsive."
   (call-interactively #'lsp-find-implementation))
 
 (defun my/lsp-find-references ()
-  "Find references using lsp-mode."
+  "Use LSP references in managed buffers, otherwise use the xref backend."
   (interactive)
-  (call-interactively #'lsp-find-references))
+  (call-interactively
+   (if (bound-and-true-p lsp-managed-mode)
+       #'lsp-find-references
+     #'xref-find-references)))
 
 (defun my/lsp-require-feature (method)
   "Require an attached server supporting METHOD."
@@ -369,6 +371,8 @@ Consult preview responsive."
 The new value also becomes the default for managed buffers opened later in
 this Emacs session.  Use Customize to persist the choice across restarts."
   (interactive)
+  (unless (bound-and-true-p lsp-managed-mode)
+    (user-error "Start an LSP server before toggling its diagnostics"))
   (let ((enable (not (and (bound-and-true-p lsp-diagnostics-mode)
                           (bound-and-true-p flycheck-mode)))))
     (setq my/lsp-diagnostics-enabled enable)
@@ -529,9 +533,10 @@ this Emacs session.  Use Customize to persist the choice across restarts."
   "Honor explicit formatter settings and project Biome configuration.
 Otherwise retain Apheleia's mode defaults.  Use directory-local
 `apheleia-formatter' for projects with a different formatting policy."
-  (unless (local-variable-p 'apheleia-formatter)
+  (unless (or (file-remote-p default-directory)
+              (local-variable-p 'apheleia-formatter))
     (when (and (derived-mode-p 'js-mode 'js-ts-mode 'typescript-ts-mode
-                              'tsx-ts-mode 'json-mode 'json-ts-mode
+                              'tsx-ts-mode 'typescript-mode 'json-mode 'json-ts-mode
                               'css-mode 'css-ts-mode)
                (or (locate-dominating-file default-directory "biome.json")
                    (locate-dominating-file default-directory "biome.jsonc")))

@@ -76,10 +76,10 @@ visible."
 ;; early-init.el disables automatic initialization, so do it exactly once here.
 (package-initialize)
 
-;; Fresh installations need archive metadata before :ensure can resolve packages.
-(unless package-archive-contents
-  (package-refresh-contents))
 (require 'use-package)
+(require 'init-package-policy)
+;; use-package refreshes metadata only when a missing dependency needs it.
+;; An installed setup should start even if archive metadata was removed.
 
 (setq use-package-always-ensure t
       use-package-compute-statistics nil

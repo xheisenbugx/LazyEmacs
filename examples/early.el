@@ -4,7 +4,9 @@
       lazyemacs-fonts '("JetBrainsMono Nerd Font Mono" "DejaVu Sans Mono")
       lazyemacs-enable-recovery t
       lazyemacs-enable-mail nil
+      lazyemacs-prefer-tree-sitter t
       lazyemacs-org-directory (expand-file-name "~/org/"))
+;; For an already installed setup: set LAZYEMACS_OFFLINE=1 before launch.
 ;; Optional mail identity (also requires external mu/mbsync/msmtp configuration):
 ;; (setq lazyemacs-enable-mail t
 ;;       my/mu4e-user-full-name "Your Name"
