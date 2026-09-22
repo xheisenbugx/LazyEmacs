@@ -20,7 +20,7 @@ major mode's keys; `SPC sk` describes the available bindings.
 - `SPC t` runs focused tests, without a discovery tree, watcher, or debugger.
 - `C-s` saves only in ordinary editing buffers. Minibuffers, terminals, and
   special modes retain their own input behavior. `C-u` retains Evil scrolling;
-  use a numeric prefix (`4 SPC ft`) to request a fresh terminal.
+  use `SPC ft` to start a fresh project terminal.
 
 ## Everyday editing
 
@@ -134,14 +134,14 @@ Multiline selections are not supported by the word/selection search shortcuts.
 | Keys | Action |
 |---|---|
 | `C-/`, `C-_` | Toggle this tab's project terminal pane |
-| `SPC ft` | Show that same pane |
+| `SPC ft` | Start a fresh independent project terminal |
 | `SPC fT` | Show a terminal for the current directory, owned by this tab |
-| `4 SPC ft` / `4 SPC fT` | Fresh shell; previous shells remain alive |
+| `4 SPC fT` | Fresh current-directory shell; previous shells remain alive |
 | `C-h/j/k/l` | Navigate windows while typing in the shell |
 | `C-q` | Quote the next terminal input key |
 
 There is one root-terminal slot per tab, plus current-directory slots per tab.
-The `ft` and Ctrl-slash paths reuse the same root slot. Interactive tasks start
+Ctrl-slash reuses the root slot. `SPC ft` and interactive tasks start
 independent shells. Removed duplicate terminal keys include `SPC te/ts/tt/tp/tn`,
 `SPC pe/pt/pT`, and `C-x p e/s`; `SPC t` is now exclusively tests.
 

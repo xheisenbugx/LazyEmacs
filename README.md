@@ -336,9 +336,10 @@ modes; directory-local `apheleia-formatter` values override that choice.
 ## Terminals
 
 Ghostel is the terminal integration throughout this distribution. `C-/` (or
-`C-_`) toggles the current tab's project terminal pane; `SPC f t` opens the same
-pane and `SPC f T` opens a current-directory terminal. A numeric prefix, such as
-`4 SPC f t`, starts a fresh shell. Interactive tasks use independent shells. There is no fallback terminal setup.
+`C-_`) toggles the current tab's project terminal pane; `SPC f t` starts a fresh
+independent project terminal, and `SPC f T` opens a current-directory terminal.
+`4 SPC f T` starts a fresh current-directory shell. Interactive tasks use
+independent shells. There is no fallback terminal setup.
 
 Ghostel requires dynamic module support. The installed package can download a
 prebuilt native module on first use; source builds require the toolchain

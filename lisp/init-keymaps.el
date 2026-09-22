@@ -66,7 +66,7 @@
        "R" #'my/recent-files-cwd
        "s" #'save-buffer
        "S" #'write-file
-       "t" #'my/project-ghostel
+       "t" #'my/project-ghostel-new
        "T" #'my/directory-ghostel
        "u" #'sudo-edit
        "y" #'my/copy-buffer-file-name))
