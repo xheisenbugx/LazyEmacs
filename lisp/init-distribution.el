@@ -1,42 +1,67 @@
 ;;; init-distribution.el --- LazyEmacs public configuration -*- lexical-binding: t; -*-
+
 ;;; Commentary:
 ;; Stable user-facing options, private configuration loading, and diagnostics.
+;; Every `lazyemacs-*' option below is part of the public interface: set it in
+;; user/early.el (loaded before any feature module) and restart Emacs.
+
 ;;; Code:
+
 (require 'package)
-(defgroup lazyemacs nil "An Evil-first Emacs distribution." :group 'convenience)
+
+(defgroup lazyemacs nil
+  "An Evil-first Emacs distribution inspired by LazyVim."
+  :group 'convenience
+  :link '(url-link "https://github.com/xheisenbugx/LazyEmacs"))
+
 (defcustom lazyemacs-user-directory
   (expand-file-name (or (getenv "LAZYEMACS_USER_DIR") "user/") user-emacs-directory)
   "Private configuration directory.  Set LAZYEMACS_USER_DIR before startup."
   :type 'directory :group 'lazyemacs)
+
 (defcustom lazyemacs-enable-mail nil
   "Load the optional mu4e integration.  Restart after changing this option."
   :type 'boolean :group 'lazyemacs)
+
 (defcustom lazyemacs-enable-recovery t
   "Keep backup and auto-save recovery files under var/."
   :type 'boolean :group 'lazyemacs)
+
 (defcustom lazyemacs-offline (equal (getenv "LAZYEMACS_OFFLINE") "1")
   "Prevent package downloads and metadata refreshes.
 Set LAZYEMACS_OFFLINE=1 before startup to use installed packages only.
 Missing dependencies produce an error naming the package.  This option
 controls package management, not network access by language servers or tools."
   :type 'boolean :group 'lazyemacs)
+
 (defcustom lazyemacs-prefer-tree-sitter t
   "Use native language modes when their grammars are already installed.
 No grammars are downloaded automatically.  Restart after changing this option."
   :type 'boolean :group 'lazyemacs)
+
 (defcustom lazyemacs-dark-theme 'catppuccin
   "Dark theme used at startup and by the theme toggle."
   :type 'symbol :group 'lazyemacs)
+
 (defcustom lazyemacs-light-theme 'modus-operandi-tinted
   "Light theme used by the theme toggle."
   :type 'symbol :group 'lazyemacs)
+
 (defcustom lazyemacs-fonts
-  '("BlexMono Nerd Font Mono" "JetBrainsMono Nerd Font Mono" "Iosevka Nerd Font Mono" "Menlo" "DejaVu Sans Mono")
+  '("BlexMono Nerd Font Mono" "JetBrainsMono Nerd Font Mono" "Iosevka Nerd Font Mono"
+    ;; Platform defaults: macOS, Linux, then Windows.
+    "Menlo" "DejaVu Sans Mono" "Cascadia Mono" "Consolas")
   "Font families to try in order; retain the Emacs font if none is installed."
   :type '(repeat string) :group 'lazyemacs)
+
 (defcustom lazyemacs-font-height 140
   "Default font height in tenths of a point."
   :type 'integer :group 'lazyemacs)
+
+(defcustom lazyemacs-dashboard t
+  "Show the LazyEmacs dashboard when Emacs starts without files to visit."
+  :type 'boolean :group 'lazyemacs)
+
 (defcustom lazyemacs-org-directory (expand-file-name "org/" (getenv "HOME"))
   "Directory for Org agenda and capture files."
   :type 'directory :group 'lazyemacs)
@@ -78,7 +103,12 @@ No grammars are downloaded automatically.  Restart after changing this option."
                         ("vscode-html-language-server" . "HTML LSP")
                         ("yaml-language-server" . "YAML LSP")
                         ("docker-langserver" . "Dockerfile LSP")
-                        ("emacs-lsp-booster" . "optional buffered JSON transport"))
+                        ("lua-language-server" . "Lua LSP")
+                        ("bash-language-server" . "Bash LSP")
+                        ("emacs-lsp-booster" . "optional buffered JSON transport")
+                        ("debugpy-adapter" . "Python debugging (pip install debugpy)")
+                        ("dlv" . "Go debugging")
+                        ("aspell" . "spell checking (or hunspell)"))
                       (when lazyemacs-enable-mail
                         '(("mu" . "mail index") ("mbsync" . "mail sync")
                           ("msmtp" . "mail delivery")))))
@@ -90,10 +120,11 @@ No grammars are downloaded automatically.  Restart after changing this option."
                      lazyemacs-enable-mail lazyemacs-enable-recovery))
       (when (fboundp 'treesit-language-available-p)
         (princ "\nGrammar availability (no automatic downloads)\n")
-        (dolist (language '(typescript tsx javascript python go rust json css yaml bash))
+        (dolist (language (if (boundp 'lazyemacs-grammars) lazyemacs-grammars
+                            '(typescript tsx javascript python go rust json css yaml bash)))
           (princ (format "%-16s %s\n" language
                          (if (treesit-language-available-p language) "ready" "missing or incompatible"))))
-        (princ "After installing a grammar: M-x lazyemacs-refresh-language-modes, then reopen the file.\n"))
+        (princ "Install missing grammars with SPC h T (M-x lazyemacs-install-grammars), then reopen the file.\n"))
       (when (boundp 'package-alist)
         (princ "\nInstalled packages (versions; VC packages may report 0)\n")
         (dolist (entry (sort (copy-sequence package-alist)

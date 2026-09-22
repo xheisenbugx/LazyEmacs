@@ -1,0 +1,53 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve LazyEmacs! Please search existing issues first.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Include exact error messages.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. emacs --init-directory ~/.config/lazyemacs
+        2. Open a TypeScript file
+        3. Press SPC c a
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Doctor output
+      description: Press SPC h D (M-x lazyemacs-doctor) and paste the report. Remove anything private.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS, Linux, Windows, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: frame
+    attributes:
+      label: Graphical or terminal Emacs?
+      options: [Graphical, Terminal (emacs -nw), Daemon + emacsclient]
+    validations:
+      required: true
+  - type: checkboxes
+    id: clean
+    attributes:
+      label: Checks
+      options:
+        - label: The problem also happens without my user/config.el

@@ -62,13 +62,14 @@
       (user-error "No more functions in that direction"))))
 
 (evil-define-motion my/next-function (count)
-		    "Move to the next function start."
-		    :jump t
-		    (my/treesit-function-motion (or count 1)))
+  "Move to the next function start."
+  :jump t
+  (my/treesit-function-motion (or count 1)))
+
 (evil-define-motion my/previous-function (count)
-		    "Move to the previous function start."
-		    :jump t
-		    (my/treesit-function-motion (- (or count 1))))
+  "Move to the previous function start."
+  :jump t
+  (my/treesit-function-motion (- (or count 1))))
 
 (defun my/open-structural-fold (overlay &rest _)
   "Reveal OVERLAY when searching or editing hidden text."
@@ -108,9 +109,9 @@
           (overlay-put overlay 'modification-hooks '(my/open-structural-fold)))))))
 
 (evil-define-key 'normal 'global
-		 (kbd "]m") #'my/next-function
-		 (kbd "[m") #'my/previous-function
-		 (kbd "za") #'my/toggle-fold)
+  (kbd "]m") #'my/next-function
+  (kbd "[m") #'my/previous-function
+  (kbd "za") #'my/toggle-fold)
 
 (provide 'init-structure)
 ;;; init-structure.el ends here

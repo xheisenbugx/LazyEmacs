@@ -30,7 +30,6 @@
   ;; 0.3 seconds of idle time, which competes directly with Consult's debounce
   ;; and LSP's idle processing.  Signs still refresh on save and Magit refresh;
   ;; `M-x diff-hl-flydiff-mode' remains available when live unsaved signs matter.
-  (add-hook 'magit-pre-refresh-hook #'diff-hl-magit-pre-refresh)
   (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh))
 
 (use-package git-link
@@ -50,6 +49,33 @@
   (interactive)
   (require 'git-link)
   (let ((git-link-open-in-browser nil)) (call-interactively #'git-link)))
+
+(defun my/git-status-cwd ()
+  "Open Magit for the repository containing the current directory.
+Unlike `magit-status', this never asks which repository to use."
+  (interactive)
+  (require 'magit)
+  (magit-status-setup-buffer
+   (or (magit-toplevel default-directory)
+       (user-error "The current directory is not inside a Git repository"))))
+
+(defun my/git-log-cwd ()
+  "Show the current branch's log limited to the current directory."
+  (interactive)
+  (require 'magit)
+  (let ((root (or (magit-toplevel default-directory)
+                  (user-error "The current directory is not inside a Git repository"))))
+    (magit-log-setup-buffer (list (or (magit-get-current-branch) "HEAD"))
+                            (car (magit-log-arguments))
+                            (list (file-relative-name default-directory root)))))
+
+(defun my/git-diff-upstream ()
+  "Diff the working tree against the current branch's upstream."
+  (interactive)
+  (require 'magit)
+  (unless (magit-get-upstream-branch)
+    (user-error "The current branch has no upstream"))
+  (magit-diff-range "@{upstream}"))
 
 (provide 'init-vcs)
 ;;; init-vcs.el ends here

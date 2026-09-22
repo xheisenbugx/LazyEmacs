@@ -95,15 +95,22 @@
   :config
   (put 'dired-find-alternate-file 'disabled nil)
 
-  ;; Dirvish's rich listing works best with GNU ls.  Homebrew exposes it as
-  ;; `gls' on macOS; other platforms retain their normal Dired program.
-  (when-let* ((gls (executable-find "gls")))
-    (setq insert-directory-program gls
-          dired-use-ls-dired t))
-  (when (or (executable-find "gls")
-            (not (eq system-type 'darwin)))
-    (setq dired-listing-switches
-          "-l --almost-all --human-readable --group-directories-first --no-group")))
+  ;; Dirvish's rich listing works best with GNU ls.  Linux ships it as `ls';
+  ;; Homebrew and the BSD ports install it as `gls'.  Without GNU ls, keep the
+  ;; portable switches.  Windows uses Emacs's built-in ls emulation.
+  (cond
+   ((eq system-type 'windows-nt)
+    (require 'ls-lisp)
+    (setq ls-lisp-dirs-first t
+          ls-lisp-use-insert-directory-program nil
+          dired-listing-switches "-alh"))
+   ((or (executable-find "gls") (eq system-type 'gnu/linux))
+    (when-let* ((gls (executable-find "gls")))
+      (setq insert-directory-program gls))
+    (setq dired-use-ls-dired t
+          dired-listing-switches
+          "-l --almost-all --human-readable --group-directories-first --no-group"))
+   (t (setq dired-listing-switches "-alh"))))
 
 (use-package dired-x
   :ensure nil

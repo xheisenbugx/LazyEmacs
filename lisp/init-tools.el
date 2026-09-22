@@ -1,14 +1,42 @@
 ;;; init-tools.el --- Shells, terminals, and remote files -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Ghostel is the terminal for interactive shells and project commands.
+;; Ghostel (libghostty) is the terminal for interactive shells and project
+;; commands on macOS, Linux, and Windows.  It needs an Emacs built with dynamic
+;; module support; on builds without it, the same commands open Eshell so every
+;; terminal key keeps working.
 
 ;;; Code:
+
+(defvar eshell-buffer-name)
+(declare-function eshell-send-input "esh-mode")
+(declare-function ghostel-send-string "ghostel")
+
+(defun my/ghostel-available-p ()
+  "Return non-nil when this Emacs can load Ghostel's native module."
+  (and (fboundp 'module-load) module-file-suffix t))
+
+(defun my/terminal-create (name action)
+  "Create a terminal buffer called NAME and display it with ACTION.
+Use Ghostel when possible and Eshell otherwise."
+  (if (my/ghostel-available-p)
+      (progn (require 'ghostel) (ghostel-create name action))
+    (let ((buffer (save-window-excursion
+                    (let ((eshell-buffer-name (or name "*eshell*")))
+                      (eshell t)))))
+      (pop-to-buffer buffer action)
+      buffer)))
+
+(defun my/terminal-send (buffer string)
+  "Send STRING followed by a newline to terminal BUFFER."
+  (with-current-buffer buffer
+    (if (derived-mode-p 'eshell-mode)
+        (progn (goto-char (point-max)) (insert string) (eshell-send-input))
+      (ghostel-send-string (concat string "\n")))))
 
 (defun my/ghostel-pane (fresh cwd toggle)
   "Show a tab-owned terminal, optionally FRESH, in CWD or the project root.
 When TOGGLE is non-nil, hide an already visible pane without killing it."
-  (require 'ghostel)
   (let* ((tab (tab-bar--current-tab-find))
          (directory (file-name-as-directory
                      (expand-file-name
@@ -27,7 +55,7 @@ When TOGGLE is non-nil, hide an already visible pane without killing it."
      (buffer (pop-to-buffer buffer action) buffer)
      (t
       (let* ((default-directory directory)
-             (created (ghostel-create
+             (created (my/terminal-create
                        (format "*ghostel:%s%s*" (alist-get 'name tab)
                                (if cwd ":cwd" "")) action)))
         (if cwd
@@ -50,8 +78,11 @@ When TOGGLE is non-nil, hide an already visible pane without killing it."
 (defun my/project-ghostel-new ()
   "Start an independent project shell for an interactive task."
   (interactive)
-  (require 'ghostel)
-  (ghostel-project '(4)))
+  (if (my/ghostel-available-p)
+      (progn (require 'ghostel) (ghostel-project '(4)))
+    (let ((default-directory (if-let* ((project (project-current nil)))
+                                 (project-root project) default-directory)))
+      (my/terminal-create "*eshell:project*" nil))))
 
 (defun my/ghostel-toggle ()
   "Show or hide this tab's project terminal without stopping its shell."

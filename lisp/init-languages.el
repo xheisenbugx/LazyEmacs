@@ -16,7 +16,10 @@
     (json-mode json-ts-mode (json))
     (js-json-mode json-ts-mode (json))
     (yaml-mode yaml-ts-mode (yaml))
-    (sh-mode bash-ts-mode (bash)))
+    (sh-mode bash-ts-mode (bash))
+    (lua-mode lua-ts-mode (lua))
+    (dockerfile-mode dockerfile-ts-mode (dockerfile))
+    (conf-toml-mode toml-ts-mode (toml)))
   "Fallback mode, native mode, and required grammars for supported languages.")
 
 (defun lazyemacs-typescript-fallback-mode ()
@@ -43,6 +46,46 @@ Run after installing a grammar, then reopen the file or use normal-mode."
         (if (and lazyemacs-prefer-tree-sitter
                  (treesit-language-available-p 'tsx))
             'tsx-ts-mode 'lazyemacs-typescript-fallback-mode)))
+
+;;; Grammar installation (the equivalent of nvim-treesitter's :TSInstall)
+
+(defconst lazyemacs-grammar-libraries
+  '(typescript-ts-mode js python go-ts-mode rust-ts-mode css-mode json-ts-mode
+    yaml-ts-mode sh-script lua-ts-mode dockerfile-ts-mode toml-ts-mode)
+  "Libraries whose loading registers grammar sources in Emacs 31.")
+
+(defcustom lazyemacs-grammars
+  '(typescript tsx javascript jsdoc python go gomod rust css json yaml bash lua
+    dockerfile toml)
+  "Grammars installed by `lazyemacs-install-grammars'."
+  :type '(repeat symbol) :group 'lazyemacs)
+
+(defun lazyemacs-install-grammars (&optional force)
+  "Download and compile missing tree-sitter grammars, then enable native modes.
+With prefix argument FORCE, reinstall every grammar in `lazyemacs-grammars'.
+Compiling needs git and a C compiler (Xcode tools, build-essential, or MSYS2
+gcc on Windows).  Nothing is downloaded automatically at startup."
+  (interactive "P")
+  (dolist (library lazyemacs-grammar-libraries)
+    (require library nil t))
+  (let (installed failed)
+    (dolist (language lazyemacs-grammars)
+      (when (or force (not (treesit-language-available-p language)))
+        (if (not (assq language treesit-language-source-alist))
+            (push language failed)
+          (condition-case err
+              (progn (treesit-install-language-grammar language)
+                     (push language installed))
+            (error (push language failed)
+                   (message "Grammar %s failed: %s" language
+                            (error-message-string err)))))))
+    (lazyemacs-refresh-language-modes)
+    (message "Grammars installed: %s%s"
+             (if installed (string-join (mapcar #'symbol-name (nreverse installed)) " ")
+               "none needed")
+             (if failed (format "; failed: %s (see *Messages*)"
+                                (string-join (mapcar #'symbol-name (nreverse failed)) " "))
+               ""))))
 
 (use-package typescript-mode
   :mode (("\\.[cm]?ts\\'" . typescript-mode)

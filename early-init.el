@@ -39,8 +39,7 @@
 
 ;; Never launch native compilation from an interactive session.  The previous
 ;; warning/worker variables were from older Emacs versions and are not bound
-;; during Emacs 30 early startup, so their `boundp' guards silently did
-;; nothing.  JIT compilation then spawned workers while files were previewed,
+;; during early startup, so their `boundp' guards silently did nothing.  JIT compilation then spawned workers while files were previewed,
 ;; and package refreshes queued entire packages (including tests).  Normal
 ;; byte-compiled packages and Emacs's bundled system .eln files still work.
 (setq native-comp-jit-compilation nil

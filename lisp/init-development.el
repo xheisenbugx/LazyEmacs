@@ -40,6 +40,9 @@ for the first time.  `my/lsp-start' remains an immediate manual command."
   :type 'number
   :group 'my/development)
 
+(defvar flycheck-current-errors)
+(defvar flycheck-display-errors-function)
+
 (defvar-local my/lsp-auto-start-timer nil
   "Pending automatic lsp-mode startup timer for the current buffer.")
 
@@ -107,6 +110,22 @@ for the first time.  `my/lsp-start' remains an immediate manual command."
   "Return the first executable found among COMMANDS."
   (seq-some #'executable-find commands))
 
+(defun my/lsp-add-installed-servers-to-path ()
+  "Put servers installed by `SPC c m' on `exec-path'.
+lsp-mode installs npm-based servers below `var/lsp/servers/npm/'.  Adding
+their executable directories lets automatic startup detect them exactly like
+servers installed by the system package manager."
+  (let ((npm (no-littering-expand-var-file-name "lsp/servers/npm/")))
+    (when (file-directory-p npm)
+      (dolist (package (directory-files npm t directory-files-no-dot-files-regexp))
+        (let ((bin (if (eq system-type 'windows-nt)
+                       package
+                     (expand-file-name "bin" package))))
+          (when (file-directory-p bin)
+            (add-to-list 'exec-path bin t)))))))
+
+(my/lsp-add-installed-servers-to-path)
+
 (defun my/language-server-available-p ()
   "Return non-nil when this buffer's language server is installed.
 
@@ -133,6 +152,12 @@ language without an installed server is opened."
     (my/executable-find-any "yaml-language-server"))
    ((derived-mode-p 'dockerfile-mode 'dockerfile-ts-mode)
     (my/executable-find-any "docker-langserver"))
+   ((derived-mode-p 'lua-mode 'lua-ts-mode)
+    (my/executable-find-any "lua-language-server"))
+   ;; bash-language-server does not attach to zsh/fish scripts.
+   ((and (derived-mode-p 'sh-mode 'bash-ts-mode)
+         (memq (bound-and-true-p sh-shell) '(sh bash)))
+    (my/executable-find-any "bash-language-server"))
    (t nil)))
 
 (defun my/lsp-start ()
@@ -150,7 +175,10 @@ language without an installed server is opened."
 Deferring the package load until Emacs is idle keeps the initial file visit and
 Consult preview responsive."
   (when (and (not (file-remote-p default-directory))
-             (my/language-server-available-p))
+             (or (my/language-server-available-p)
+                 ;; Installation is asynchronous; detect newly installed servers.
+                 (progn (my/lsp-add-installed-servers-to-path)
+                        (my/language-server-available-p))))
     (when (timerp my/lsp-auto-start-timer)
       (cancel-timer my/lsp-auto-start-timer))
     (setq my/lsp-auto-start-timer
@@ -182,6 +210,34 @@ Consult preview responsive."
   "Organize imports using lsp-mode."
   (interactive)
   (call-interactively #'lsp-organize-imports))
+
+(defun my/lsp-source-actions ()
+  "Select a source-level code action, such as fixing all or sorting imports."
+  (interactive)
+  (my/lsp-require-feature "textDocument/codeAction")
+  (lsp-execute-code-action-by-kind "source"))
+
+(defun my/lsp-run-codelens ()
+  "Pick and run a code lens in the current buffer."
+  (interactive)
+  (my/lsp-require-feature "textDocument/codeLens")
+  (unless (bound-and-true-p lsp-lens-mode) (lsp-lens-mode 1))
+  (lsp-avy-lens))
+
+(defun my/lsp-refresh-codelens ()
+  "Refresh code lenses in the current buffer."
+  (interactive)
+  (my/lsp-require-feature "textDocument/codeLens")
+  (lsp-lens-refresh t))
+
+(defun my/lsp-install-server ()
+  "Install a language server into LazyEmacs's state, like LazyVim's Mason.
+Servers that lsp-mode cannot install automatically must be installed with
+your platform's package manager or the language's own toolchain."
+  (interactive)
+  (require 'lsp-mode)
+  (call-interactively #'lsp-install-server)
+  (message "Installing in the background; reopen the file once it finishes"))
 
 (defun my/lsp-restart ()
   "Restart the active lsp-mode workspace."
@@ -398,7 +454,7 @@ this Emacs session.  Use Customize to persist the choice across restarts."
   :commands
   (lsp lsp-deferred lsp-format-buffer lsp-rename lsp-organize-imports
        lsp-execute-code-action lsp-find-definition lsp-find-implementation
-       lsp-find-references
+       lsp-find-references lsp-describe-session
        lsp-workspace-restart lsp-workspace-shutdown)
   :hook
   (lsp-mode . my/lsp-mode-setup)
@@ -489,7 +545,9 @@ this Emacs session.  Use Customize to persist the choice across restarts."
                 css-mode-hook css-ts-mode-hook
                 html-mode-hook html-ts-mode-hook
                 yaml-mode-hook yaml-ts-mode-hook
-                dockerfile-mode-hook dockerfile-ts-mode-hook))
+                dockerfile-mode-hook dockerfile-ts-mode-hook
+                lua-mode-hook lua-ts-mode-hook
+                sh-mode-hook bash-ts-mode-hook))
   (add-hook hook #'my/lsp-ensure))
 
 ;;; Diagnostics and documentation

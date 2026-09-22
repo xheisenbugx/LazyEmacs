@@ -1,5 +1,13 @@
 ;;; init-local-actions.el --- Evil local actions for result buffers -*- lexical-binding: t; -*-
+
+;;; Commentary:
+;; Backslash is a small local leader in grep, Occur, Dired, compilation, and
+;; Embark collection buffers.  It exposes the native editing workflows
+;; (grep-edit, occur-edit, WDired) behind the same keys everywhere, so
+;; project-wide search and replace works like LazyVim's grug-far.
+
 ;;; Code:
+
 (require 'evil)
 (require 'general)
 
