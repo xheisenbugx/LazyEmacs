@@ -44,10 +44,20 @@
   "Restore the saved desktop and its project groups."
   (interactive)
   (unless (file-exists-p (expand-file-name desktop-base-file-name my/session-directory))
-    (user-error "No saved session yet; use SPC q s first"))
+    (user-error "No saved session yet; sessions are saved on exit or with SPC q S"))
   (when (eq (desktop-owner my/session-directory) (emacs-pid))
     (desktop-release-lock my/session-directory))
   (desktop-read my/session-directory))
+
+(defun my/session-stop-saving ()
+  "Stop saving the desktop for the rest of this Emacs session.
+The previously saved session is kept; like LazyVim's `SPC q d', quitting will
+not overwrite it.  Restart Emacs to resume automatic saving."
+  (interactive)
+  (desktop-save-mode -1)
+  (when (eq (desktop-owner my/session-directory) (emacs-pid))
+    (desktop-release-lock my/session-directory))
+  (message "This session will not be saved"))
 
 (defun my/session-new-layout (name)
   "Create a named layout tab in the current project session."
@@ -86,9 +96,7 @@
                                     (file-directory-p my/session-terminal-directory))
                                my/session-terminal-directory default-directory))
         (old (current-buffer)))
-    (require 'ghostel)
-    (let ((fresh (ghostel-create)))
-      (switch-to-buffer fresh)
+    (let ((fresh (my/terminal-create nil '(display-buffer-same-window))))
       (setf (alist-get 'my/ghostel-buffer (cdr (tab-bar--current-tab-find))) fresh)
       (kill-buffer old))))
 (keymap-set my/session-terminal-mode-map "RET" #'my/session-terminal-open)

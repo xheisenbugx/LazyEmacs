@@ -1,365 +1,227 @@
-# LazyEmacs workflow and keybinding reference
+# Workflows
 
-The configuration follows [LazyVim's keymap layout](https://www.lazyvim.org/keymaps)
-using Evil, Consult/Embark, lsp-mode, Magit, and Ghostel. `SPC` is the leader in
-Normal, Visual, and Motion states. `C-c` plus the same letter prefix works from
-Insert/Emacs state. Pause after a prefix for Which Key. `SPC ?` lists the current
-major mode's keys; `SPC sk` describes the available bindings.
+How the pieces fit together for everyday work. Every key is listed in
+[keymaps.md](keymaps.md); this page explains what happens when you press them.
 
-## Intentional differences
+- [Finding things](#finding-things)
+- [Search and replace across a project](#search-and-replace-across-a-project)
+- [Language servers, formatting, and diagnostics](#language-servers-formatting-and-diagnostics)
+- [Debugging](#debugging)
+- [Terminals](#terminals)
+- [Tasks and tests](#tasks-and-tests)
+- [Projects, sessions, and layouts](#projects-sessions-and-layouts)
+- [Git](#git)
+- [Structural editing](#structural-editing)
+- [Notes and mail](#notes-and-mail)
+- [Performance choices](#performance-choices)
 
-- `C-h/j/k/l` always navigate windows, including Insert state and Ghostel.
-  Use `gK` for signature help; Ctrl-K keeps its navigation behavior.
-- `Super+p` manages session groups; native tabs are layouts within those groups.
-- `SPC qs` saves the complete desktop and `SPC ql` restores it. There are no
-  project-specific snapshots or automatic process restoration.
-- `SPC r` is the general task menu. `SPC o` is Org, `SPC m` is Evil MC, and
-  `SPC y` is snippets. These are Emacs extensions.
-- `SPC xx`/`xX` use diagnostic pickers rather than a Trouble panel. `SPC gg`/`gs`
-  open Magit. Buffer cleanup protects special/process buffers.
-- `SPC t` runs focused tests, without a discovery tree, watcher, or debugger.
-- `C-s` saves only in ordinary editing buffers. Minibuffers, terminals, and
-  special modes retain their own input behavior. `C-u` retains Evil scrolling;
-  use `SPC ft` to start a fresh project terminal.
+## Finding things
 
-## Everyday editing
+Every picker is Vertico + Orderless + Consult: type space-separated words in
+any order, move with the arrows or <kbd>C-n</kbd>/<kbd>C-p</kbd>, and watch the
+preview update. Type <kbd>&lt;</kbd> and a letter to narrow mixed lists (for
+example `<f` shows only files in <kbd>C-x b</kbd>). Two keys work in every picker:
 
-| Keys | Action |
-|---|---|
-| `SPC SPC`, `SPC ff` | Project files |
-| `SPC fF` | Files below the current directory |
-| `SPC ,`, `SPC fb` | Project buffers |
-| `SPC fB`, `SPC bj`, `C-x b` | All buffers |
-| `SPC bb`, ``SPC ` `` | Previous buffer |
-| `H` / `L`, `[b` / `]b` | Previous/next buffer (`H/L` in editing buffers) |
-| `C-s`, `SPC fs` | Save file |
-| `M-j` / `M-k` | Move line/selection down/up in editing buffers |
-| `SPC fn` | New unnamed file buffer |
-| `SPC .` | Toggle scratch |
-| `SPC bd` | Kill current buffer, respecting modified-file prompts |
-| `SPC bD` | Kill buffer and close its window |
-| `SPC bo` / `SPC bi` | Kill other/invisible file buffers; preserve process buffers |
-| `SPC fp` | Switch project |
-| `SPC fr` / `SPC fR` | Recent files / recent files below current directory |
-| `SPC fy` | Copy file/directory path |
-| `SPC fc` | Private config |
-| `SPC e`, `SPC fe` / `SPC fE` | Explorer at project root / current directory |
-| `SPC fj` | Dired at current file |
-| `SPC fD`, `SPC fo`, `SPC fS`, `SPC fu` | Delete file, external opener, save as, sudo edit |
+- <kbd>C-.</kbd> opens Embark actions for the highlighted candidate (open in
+  another window, delete the file, copy its path, export all results, …).
+- <kbd>M-R</kbd> or <kbd>SPC s R</kbd> reopens the last picker where you left it.
 
-Buffer cleanup operates on live file buffers shared by sessions; it does not
-isolate buffers by tab group. Cancellation and unsaved-file prompts are retained.
-`SPC h` provides Helpful, Info, and `SPC hD` environment diagnostics. `SPC j`
-retains xref back/forward, line/outline selection, and one Avy character/word
-shortcut (`jc`/`jw`). Flash remains the primary labeled jump system.
+"Root" means the current project (the nearest Git repository or a directory
+with `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, or
+`.projectile`). "cwd" means the directory of the current buffer.
 
-## Code and diagnostics
+## Search and replace across a project
 
-| Keys | Action |
-|---|---|
-| `gd`, `gr`, `gI` | Definition, references, implementation |
-| `gy`, `gD` | Type definition, declaration |
-| `K`, `gK` | Documentation, signature help |
-| `gai`, `gao` | Incoming/outgoing calls through an xref picker |
-| `gi` | Evil: return to last insertion position |
-| `SPC ca`, `SPC cr`, `SPC co` | Code action, symbol rename, organize imports |
-| `SPC cR` | Rename file (lsp-mode's rename-file integration remains active) |
-| `SPC cl` | LSP session information |
-| `SPC cs`, `SPC ss` / `SPC sS` | File/workspace symbols |
-| `SPC cd` | Diagnostic at point |
-| `SPC sd`, `SPC xx` / `SPC sD`, `SPC xX` | Workspace/file diagnostics |
-| `SPC xf` / `SPC xL` | Current Flycheck picker/list |
-| `[d` / `]d` | Previous/next diagnostic |
-| `[e` / `]e` | Previous/next error only |
-| `[w` / `]w` | Previous/next warning only |
-| `[q` / `]q` | Previous/next grep, Occur, or compilation result |
-| `SPC xq` | Show the current result buffer |
-| `SPC cf` | Format buffer, or selected region when LSP supports range formatting |
-| `SPC uf` / `SPC uF` | Global/buffer format-on-save |
-| `SPC ud`, `SPC uh` | Toggle diagnostics/inlay hints |
+1. <kbd>SPC s r</kbd> and type the search. Results stream in from ripgrep.
+2. Press <kbd>RET</kbd>. The results become an editable grep buffer.
+3. Edit the lines with any Vim command, including <kbd>:s</kbd> and macros.
+4. <kbd>\\ c</kbd> writes the edits into the source buffers. Save them with
+   <kbd>SPC f s</kbd> or `M-x save-some-buffers`.
 
-Errors do not automatically appear in Eldoc when point moves over them.
-Underlines and diagnostic lists remain active; `SPC cd` explicitly shows the
-message in the echo area. `K` continues to show symbol documentation.
+Edits apply to the source buffers immediately; there is no rollback other than
+undo in each buffer. The same <kbd>\\ e</kbd> edit mode works in Occur and in
+Dired, where it renames files.
 
-New LSP navigation checks server capabilities. `gd` and `gr` fall back to xref in
-unmanaged buffers; file symbols fall back to Imenu. The diagnostics toggle
-requires an attached server. Code navigation records Evil jumps for `C-o`/`C-i`.
-`C-c L` is lsp-mode's full command map; manual start/restart/shutdown are also
-available as `M-x my/lsp-start`, `my/lsp-restart`, and `my/lsp-shutdown`.
+<kbd>SPC s w</kbd> searches literally for the word under point or the selected
+text. <kbd>SPC s t</kbd> finds `TODO:`, `FIXME:`, `HACK:` and similar comments.
 
-Whole-buffer formatting prefers project-aware Apheleia, then LSP, then indentation.
-Visual formatting requires a contiguous selection and LSP range-formatting
-support: it does not silently format the whole file or slice a file for an
-external formatter. Use `=` to indent when range formatting is unavailable.
-Biome config and explicit directory-local formatter choices retain priority.
-Format-on-save stays off by default. Global and buffer toggles apply for the
-running session; changing major modes can reapply the global default.
+## Language servers, formatting, and diagnostics
 
-## Search and replacement
+lsp-mode starts automatically, a quarter second after a file opens, **when its
+language server is on your `PATH`**. Nothing is installed for you unless you ask:
 
-| Keys | Action |
-|---|---|
-| `SPC /`, `SPC sg` / `SPC sG` | Project/current-directory text search |
-| `SPC sb` / `SPC sB` | Current/all-open-buffer line search |
-| `SPC sw` / `SPC sW` | Literal symbol/selection search in project/current directory |
-| `SPC sr` | Search, then `RET` exports results into native grep-edit |
-| `SPC sR`, `M-R` | Resume last picker |
-| `SPC su`, `C-x u` | Vundo undo tree |
-| `SPC :`, `SPC sc` | Command history |
-| `SPC sC` | Command picker |
-| `SPC si`, `SPC sm`, `SPC sM` | Imenu, marks, manual pages |
-| `C-.`, `C-;` | Embark actions/default action |
-| `M-y` | Kill-ring picker |
+- <kbd>SPC c m</kbd> installs a server that lsp-mode knows how to download
+  (most npm-based servers). It lands in `var/lsp/servers/` and is detected the
+  next time you open a file.
+- Otherwise use your package manager: `brew install`, `apt install`,
+  `npm install -g`, `pipx install`, `go install`, `rustup component add`, …
 
-For replacement: `SPC sr`, enter a search, wait for results, then press `RET`.
-Edit result text, finish with `\ c`, and save affected source buffers explicitly.
-Grep/Occur edits update source buffers immediately; finishing is not a rollback
-or automatic disk save. `C-g` cancels the picker without applying replacement.
-Multiline selections are not supported by the word/selection search shortcuts.
+`SPC c l` shows what is attached. `M-x my/lsp-start`, `my/lsp-restart`, and
+`my/lsp-shutdown` control the lifecycle, and <kbd>C-c L</kbd> is lsp-mode's full
+command map.
 
-## Git
+Without a server, <kbd>gd</kbd>/<kbd>gr</kbd> fall back to xref (tags, Elisp,
+grep) and <kbd>SPC c s</kbd> falls back to Imenu, so navigation still works.
 
-| Keys | Action |
-|---|---|
-| `SPC gg`, `SPC gs`, `C-x g` | Magit status |
-| `SPC gf` / `SPC gl` | Current-file/repository history |
-| `SPC gb` / `SPC gd` | Blame/file diff |
-| `[h` / `]h` | Previous/next hunk |
-| `SPC ghp`, `SPC ghs`, `SPC ghr` | Preview, stage, revert hunk |
-| `SPC gB` / `SPC gY` | Open/copy file or selection link |
+**Formatting** (<kbd>SPC c f</kbd>) prefers the project's formatter through
+Apheleia (Prettier, Biome, Black, Ruff, gofmt, rustfmt, …), then the language
+server, then indentation. A `biome.json` selects Biome automatically, and a
+directory-local `apheleia-formatter` overrides everything. In Visual state it
+formats only the selection, which requires server range-formatting support.
+Format-on-save is off until you toggle it: <kbd>SPC u f</kbd> globally or
+<kbd>SPC u F</kbd> for one buffer.
+
+**Diagnostics** are underlined as you type. Errors are not echoed while you
+move around; <kbd>SPC c d</kbd> shows the message at point, <kbd>]d</kbd>
+walks through them, and <kbd>SPC x x</kbd> opens a searchable list.
+
+Optional visual extras (reference highlighting, breadcrumbs, inlay hints, code
+lenses) are off by default because they request data on every cursor move.
+Enable them together with `(setq my/lsp-visual-extras t)` in `user/early.el`,
+or inlay hints alone with <kbd>SPC u h</kbd>.
+
+## Debugging
+
+LazyEmacs uses [Dape](https://github.com/svaante/dape), a Debug Adapter Protocol
+client like nvim-dap. Install the adapter for your language first:
+
+| Language | Adapter | Install |
+|---|---|---|
+| Python | debugpy | `pip install debugpy` in the project environment |
+| Go | Delve | `go install github.com/go-delve/delve/cmd/dlv@latest` |
+| Rust, C, C++ | CodeLLDB | Download the VS Code extension; see Dape's README |
+| JavaScript, TypeScript | js-debug | See Dape's README for `js-debug` |
+
+Then:
+
+1. <kbd>SPC d b</kbd> sets a breakpoint (<kbd>SPC d B</kbd> for a condition).
+2. <kbd>SPC d c</kbd> starts. Dape proposes configurations for the current
+   file; complete the prompt or edit the arguments before <kbd>RET</kbd>.
+3. Step with <kbd>SPC d O</kbd> (over), <kbd>SPC d i</kbd> (into),
+   <kbd>SPC d o</kbd> (out), and <kbd>SPC d c</kbd> (continue).
+4. Scopes, the call stack, and breakpoints open on the left; the REPL opens at
+   the bottom. Variable values appear inline next to the code.
+5. <kbd>SPC d t</kbd> terminates the session.
+
+Profiling Emacs itself is on <kbd>SPC d p p</kbd>: press it once to start and
+again to stop and open the report.
 
 ## Terminals
 
-| Keys | Action |
+[Ghostel](https://github.com/dakra/ghostel) embeds libghostty, the terminal
+engine from Ghostty. It is fast, handles full-screen programs, and runs on
+macOS, Linux, and Windows. On first use it downloads a prebuilt native module
+for your platform (or you can build one with `M-x ghostel-module-compile`).
+Emacs builds without dynamic-module support open Eshell instead.
+
+- <kbd>C-/</kbd> shows or hides this tab's project terminal at the bottom. The
+  shell keeps running while hidden.
+- <kbd>SPC f t</kbd> starts a new, independent shell at the project root.
+- <kbd>SPC f T</kbd> shows the terminal for the current directory;
+  <kbd>4 SPC f T</kbd> forces a new one.
+- <kbd>C-h/j/k/l</kbd> leave the terminal for the neighbouring window.
+  <kbd>C-q</kbd> sends the next key straight to the shell when a program needs
+  a key that Emacs would otherwise handle.
+
+Terminals belong to the tab that opened them, so each layout keeps its own.
+
+## Tasks and tests
+
+**Tasks** (<kbd>SPC r r</kbd>) are discovered from the project:
+`package.json` scripts (with the right npm/pnpm/yarn/bun), pytest,
+`go test`/`go build`, `cargo test`/`cargo build`, and `make`. Pick one or type
+a custom command. It runs in a compilation buffer where errors are clickable
+and <kbd>]q</kbd>/<kbd>[q</kbd> step through them. <kbd>SPC r R</kbd> reruns the
+last task and <kbd>SPC r T</kbd> runs one in a terminal instead. Add your own
+with a reviewed `.dir-locals.el`:
+
+```elisp
+((nil . ((my/project-tasks . (("e2e" . "npm run test:e2e")
+                               ("migrate" . "make migrate"))))))
+```
+
+**Tests** (<kbd>SPC t</kbd>) understand pytest, Vitest, Jest, and Go:
+
+| Keys | Runs |
 |---|---|
-| `C-/`, `C-_` | Toggle this tab's project terminal pane |
-| `SPC ft` | Start a fresh independent project terminal |
-| `SPC fT` | Show a terminal for the current directory, owned by this tab |
-| `4 SPC fT` | Fresh current-directory shell; previous shells remain alive |
-| `C-h/j/k/l` | Navigate windows while typing in the shell |
-| `C-q` | Quote the next terminal input key |
+| <kbd>SPC t t</kbd> | The current file |
+| <kbd>SPC t r</kbd> | The test around point (JS/TS needs the tree-sitter grammar) |
+| <kbd>SPC t T</kbd> | The whole suite |
+| <kbd>SPC t l</kbd> | The last test command, even after running other tasks |
 
-There is one root-terminal slot per tab, plus current-directory slots per tab.
-Ctrl-slash reuses the root slot. `SPC ft` and interactive tasks start
-independent shells. Removed duplicate terminal keys include `SPC te/ts/tt/tp/tn`,
-`SPC pe/pt/pT`, and `C-x p e/s`; `SPC t` is now exclusively tests.
+Python uses the project's `.venv` when present, then `uv run` for uv projects
+(without syncing), then `python` on `PATH`. JavaScript runners must already be
+installed in the project. Test history and output are kept per project and
+separately from other tasks.
 
-Ghostel is the only shell frontend. Popper (``C-` ``, ``M-` ``, ``C-M-` ``) manages
-help, warnings, and compilation popups, not a second terminal system. Output
-popups enter Evil Normal state on first display and when reopened, so motions
-like `h/j/k/l`, `w/b`, `gg/G`, and `/` work immediately. Interactive shell and
-minibuffer input retain their own controls.
+Opening a project never runs anything; commands only run when you choose them.
 
-## Tasks and focused tests
+## Projects, sessions, and layouts
 
-| Keys | Action |
-|---|---|
-| `SPC rr`, `SPC rR` | Run a general task / rerun it |
-| `SPC ro`, `SPC rn` | General task output / next failure |
-| `SPC rT` | Run a task in a fresh independent Ghostel shell |
-| `SPC tt`, `SPC tr` | Test current file / nearest test |
-| `SPC tl` | Repeat last focused test |
-| `SPC to`, `SPC tS` | Test output / stop running test |
+LazyEmacs organizes work in three levels, all using Emacs's native tab bar:
 
-Test commands and buffers are tracked separately from general tasks, keyed by
-canonical project root. Running a build does not overwrite the last focused
-test or its output. Tests retain Python/pytest, JS/TS Vitest/Jest, and Go support.
-Nearest JS/TS tests require a native parser and literal test names. Runners must
-already be installed. Other frameworks and monorepo package-specific commands
-can use the general task picker, which recognizes package scripts and common
-Python, Go, Rust, and Make tasks.
+- A **session** is a tab group, usually one per project. <kbd>s-p</kbd> (or
+  <kbd>SPC TAB g</kbd>) opens the session picker: the current session first,
+  then the most recent. Type a new name to create one.
+- A **layout** is a tab inside a session, holding an arrangement of windows.
+  <kbd>SPC TAB TAB</kbd> creates one, <kbd>s-1</kbd>…<kbd>s-9</kbd> select them,
+  and <kbd>SPC TAB o</kbd> closes the others in this session only.
+- **Buffers** are shared, so closing a layout never kills your files or shells.
 
-Python tests use the project's `.venv` interpreter when present, then
-`uv run --frozen --no-sync --no-python-downloads python -m pytest` for uv projects, then
-`python -m pytest` from PATH. Prepare the environment first; this command does
-not synchronize dependencies. Focused tests reject files outside the selected
-project instead of running them with the wrong project's settings.
+In the session picker, <kbd>C-.</kbd> offers <kbd>k</kbd> close,
+<kbd>r</kbd> rename, <kbd>o</kbd> open its directory, and <kbd>s</kbd> save.
 
-Commands from `.dir-locals.el` still require Emacs's safe-variable approval;
-opening a project never executes a task. Finite tasks prompt to save modified
-project files before starting compilation-mode. Last command strings persist
-through Savehist; running jobs and output buffers do not survive a restart.
+The desktop (open files, cursor positions, sessions, and layouts) is saved when
+Emacs exits and restored when it starts. <kbd>SPC q S</kbd> saves right away,
+<kbd>SPC q s</kbd> restores, and <kbd>SPC q d</kbd> skips saving for this run.
+Processes are never restored: a saved terminal comes back as a placeholder
+where <kbd>RET</kbd> starts a fresh shell. Start with `--no-desktop` to skip the
+restore once. Session grouping comes from
+[project-tab-sessions](https://github.com/xheisenbugx/project-tab-sessions).
 
-## Project sessions
+## Git
 
-The `Super+p` session picker shows the current session first, followed by the
-most recently used sessions. Each row shows a current-session marker, layout
-tab count, and abbreviated project path (or `no project`). Type a new name to
-create a session.
+<kbd>SPC g g</kbd> opens Magit, which covers staging, committing, rebasing,
+stashing (<kbd>SPC g S</kbd>), and history. The gutter shows changed lines;
+<kbd>]h</kbd>/<kbd>[h</kbd> move between hunks, and <kbd>SPC g h</kbd> previews,
+stages, or resets the hunk under point. <kbd>SPC g B</kbd> opens the file or
+selected lines on GitHub, GitLab, or similar, and <kbd>SPC g Y</kbd> copies
+that link.
 
-Select a session and press `C-.` for Embark actions:
-
-| Key | Action |
-|---|---|
-| `RET` | Switch to the session |
-| `k` | Close its layout tabs, keeping buffers and terminal processes alive |
-| `r` | Rename the session and all its tabs' group metadata |
-| `o` | Switch to the session and open its project directory in Dired |
-| `s` | Save the desktop, including all sessions, using the existing desktop save |
-
-Closing and renaming refresh the picker and keep it open for further actions;
-saving also keeps it open. The last remaining session cannot be closed. Rename
-rejects empty names and names already used by another session. Opening a
-directory requires an associated project. Saving records layouts and file
-positions, not unsaved buffer contents or running processes; `SPC q l` restores
-the saved desktop.
-
-Projects use native tab groups, with regular layout tabs inside each group.
-`Super+p` switches groups and resumes the last active tab. `Super+1…9/0`
-selects a tab within the active group; `Super+t/r/w` creates, renames, or closes
-one.
-
-The [project-tab-sessions package](https://github.com/xheisenbugx/project-tab-sessions)
-is installed from GitHub using built-in `package-vc` support (Emacs 30+).
-See its [installation and usage guide](https://github.com/xheisenbugx/project-tab-sessions#install)
-and [package comparison](https://github.com/xheisenbugx/project-tab-sessions/blob/main/COMPARISON.md)
-for the alternatives reviewed. `lisp/init-workspaces.el` configures the
-package's presentation and Embark actions. Ghostel terminals remain attached
-to their tabs.
-
-## Windows and layout tabs
-
-| Keys | Action |
-|---|---|
-| `SPC -`, `SPC \|` | Split below/right |
-| `SPC wd`, `SPC wm`, `SPC w=` | Close window, zoom/restore, balance |
-| `SPC wh/j/k/l` | Window navigation |
-| `SPC wu`, `SPC wr` | Undo/redo window layout |
-| `SPC TAB TAB`, `SPC TAB d` | New/close layout tab |
-| `SPC TAB [` / `]`, `SPC TAB f` / `l` | Previous/next, first/last layout |
-| `SPC TAB o` | Close other layouts in this session only |
-| `SPC TAB b`, `SPC TAB r`, `SPC TAB N` | Pick, rename, create named layout |
-| `SPC TAB g` / `G` | Session picker / move current tab to a group |
-| `SPC TAB u` / `R` | Tab layout history back/forward |
-| `Super+p`, `Super+1…9/0` | Session picker / select layout in current session |
-| `Super+t/r/w`, `C-TAB`, `C-S-TAB` | New/rename/close tab, next/previous tab |
-
-The old `SPC z` tab menu is removed. `C-c z` is the Insert-state tab-menu alias.
-Native `C-x t` bindings remain available. Desktop saves retain files, positions,
-groups, project roots, and layouts. Saved terminals become placeholders where
-`RET` starts a fresh shell. It never recreates previous processes.
-`SPC qs` saves and `SPC ql` restores the complete desktop; `SPC qq` quits.
-`SPC qr` reloads one module, `SPC qf` opens private config, and `SPC qp` upgrades
-packages. Manual saves refuse another process's desktop lock. Restart after
-changing startup/package initialization or the LSP booster; those modules are
-excluded from live reload.
-
-## Other retained workflows
-
-`SPC ul/uL` toggle line/relative numbers; `SPC uw` toggles wrapping; `SPC ub`
-switches dark/light themes. `SPC m` retains Evil MC (`n/p/s/a/l/u/q`), also
-available under `gz`. `SPC y` offers snippet insertion/creation/editing.
-`SPC o` retains Org agenda/capture/dashboard/links. Mail remains opt-in under
-`SPC M`. `C-c` aliases and standard mode-specific `C-c C-c` actions remain.
-
-Flash retains `s/S/f/t/F/T` and `;/,` in Normal, Visual, and operator states.
-Operator-state `S` returns a tree-sitter range. `SPC jc/jw` are the only custom
-Avy character/word shortcuts; duplicate Meta/global aliases were removed.
-Expansion (`C-=`), Evil Surround (`ys/cs/ds`), and commenting (`gc`) remain.
+Gutter signs refresh on save and after Magit operations. For live signs while
+typing, enable `M-x diff-hl-flydiff-mode`.
 
 ## Structural editing
 
-Use `]q` / `[q` in Normal state to visit the next/previous result with
-`next-error` / `previous-error`, including Embark-exported grep/Occur results
-and compilation output.
+With a tree-sitter grammar installed (<kbd>SPC h T</kbd>), the function text
+object (<kbd>vaf</kbd>, <kbd>cif</kbd>), <kbd>]m</kbd>/<kbd>[m</kbd>, folding
+(<kbd>za</kbd>), and <kbd>S</kbd> (select a syntax node with Flash) understand
+the real syntax tree. Quote, bracket, argument, call, and tag objects work in
+every buffer through syntax tables; they search the current line first and
+then up to 500 lines around point. Counts and <kbd>.</kbd> repeat work as in
+Vim. See [evil-textobj-plus](https://github.com/xheisenbugx/evil-textobj-plus)
+for custom objects.
 
-[evil-textobj-plus](https://github.com/xheisenbugx/evil-textobj-plus) supplies
-mini.ai-style nearby objects. Combine `i`/`a` with an object in Visual state or
-after `d`, `c`, or `y`; normal-state Flash motions and `C-h/j/k/l` are unchanged.
+## Notes and mail
 
-| Example | Action |
-| --- | --- |
-| `ciq` | Change inside a nearby quoted string |
-| `vab` then `ab` | Select any bracket pair, then expand outward |
-| `d2ab` | Delete the second enclosing bracket object |
-| `din)` / `dil)` | Delete inside the next / previous parentheses |
-| `viF` / `vaF` | Select call arguments / the whole function call |
-| `via` / `daa` | Select an argument / delete it and an adjacent comma |
-| `vit` / `vat` | Select tag contents / balanced named tag |
-| `g[b` / `g]b` | Move to the first / last character of the bracket object |
+Org files live in `lazyemacs-org-directory` (default `~/org/`).
+<kbd>SPC o c</kbd> captures a task, note, or journal entry; <kbd>SPC o a</kbd>
+opens the agenda; <kbd>SPC o d</kbd> opens a daily dashboard of important
+undated tasks, today's agenda, the next three days, and upcoming deadlines.
+Python, shell, and Emacs Lisp source blocks can be executed after confirmation.
 
-`(`, `[`, `{`, `<` trim inner whitespace; their closing counterparts preserve
-it. `b` groups parentheses/brackets/braces; `q` groups quote types. Native word,
-paragraph and other unmodified Evil text objects remain available. Bracket
-objects also match in strings/comments, following mini.ai. Counts and
-`.` repeat work with the new objects. Search tries the current line first, then at most 500 lines each way;
-change `evil-textobj-plus-lines` or provide custom regexp/Tree-sitter objects
-through `evil-textobj-plus-custom-objects`. See the package README for details.
+Mail through mu4e is optional; see [configuration.md](configuration.md#mail).
 
-With an active native Tree-sitter parser, `vaf` selects a function definition
-and `cif` changes its body. This preserves our existing LazyVim mapping; upstream
-mini.ai uses `f` for calls, which this config puts on `F`. Arguments use the
-parser when available and syntax-based matching otherwise. `]m` / `[m` move
-through function starts; `za` folds the surrounding block (Hideshow fallback).
+## Performance choices
 
-Install the appropriate language grammar and use its `*-ts-mode` for structural
-objects. Function definitions require a parser. Syntax-based calls, quotes and
-tags are intentionally heuristic; use custom Tree-sitter providers for language
-constructs such as template strings or HTML with implicit closing tags.
+These defaults keep typing and pickers responsive on large projects:
 
-## Responsiveness defaults
-
-Consult previews candidates automatically.  Cheap same-buffer previews use a
-0.2-second debounce; buffer, file, xref, and LSP-backed previews use 0.4 seconds
-so rapid candidate movement stays responsive.  The original exception remains
-the recursive grep commands, where `M-.` requests a preview explicitly.
-
-Tree-sitter mode selection uses fixed built-in associations instead of
-treesit-auto.  The latter advised every major-mode lookup and repeatedly
-scanned all grammar recipes, which added about 1.5 seconds to every file visit
-on macOS—including files opened temporarily by Consult previews.
-
-lsp-mode uses its lower-allocation plist protocol representation and keeps
-local stdio servers behind `emacs-lsp-booster` when the executable is present.
-The booster moves JSON parsing and transport buffering outside Emacs; remote or
-network-based servers automatically use the normal lsp-mode transport.  Set
-`my/lsp-booster-enabled` to nil and restart the workspace to disable it.
-
-lsp-mode also keeps continuously updated visual extras off by default.
-Diagnostics, completion,
-Eldoc, xref, and code actions remain enabled.  To restore reference highlights,
-breadcrumbs, inlay hints, and the modeline code-action indicator together, use:
-
-```text
-M-x customize-option RET my/lsp-visual-extras RET
-```
-
-Diagnostics start enabled by default.  `C-c u d` toggles them in the current
-buffer and sets the default for later buffers in that session.  To save the
-startup preference, customize `my/lsp-diagnostics-enabled`.
-
-Git gutter signs update on save and after Magit refreshes.  Live unsaved signs
-can be toggled temporarily with `M-x diff-hl-flydiff-mode`; leaving that mode
-off avoids a repository diff competing with minibuffer and LSP idle timers.
-
-## Local actions in result buffers
-
-In Evil Normal state, backslash opens a local-action menu in grep, Occur,
-Dired, compilation, and Embark collection buffers:
-
-| Key | Action |
-|---|---|
-| `\ e` | Edit grep/Occur results or Dired filenames |
-| `\ c` | Finish the current native edit session |
-| `\ r` | Refresh results while browsing |
-| `\ f` | Toggle following grep/Occur/compilation results |
-| `\ a` | Embark actions for the item at point |
-| `\ q` | Close the window (does not undo changes) |
-
-Actions that do not apply to the current mode explain that instead of running
-an unrelated command. `e` stays an Evil motion; normal editing commands remain
-available after entering edit mode. In grep browsing buffers, `i` is also an
-alias for entering native grep-edit instead of Wgrep. `]q`/`[q` still navigate
-results. Grep and Occur edits update source buffers immediately; finishing
-returns to browsing and does not save those source buffers to disk. WDired's
-finish command applies filename changes. Refresh is blocked during editing.
-
-## Validation
-
-See [README validation](../README.md#validation-and-contributing) for the offline
-and isolated integration commands. `lazyvim-keymap-tests.el` covers state/key
-precedence, terminal ownership, range formatting, diagnostics, call-hierarchy
-routing, independent test history, session-scoped tab cleanup, and Git copy.
-Graphical terminal startup and LSP-server-specific capabilities require runtime
-verification beyond mocked integration checks.
+- Previews wait for a short pause (0.2 s in the same buffer, 0.4 s for files and
+  LSP results). Project-wide grep previews on demand with <kbd>M-.</kbd>.
+- Native tree-sitter modes are selected once at startup from installed grammars,
+  instead of probing on every file visit.
+- lsp-mode uses plist messages, disables its own file watchers, and pipes local
+  servers through [emacs-lsp-booster](https://github.com/blahgeek/emacs-lsp-booster)
+  when it is installed. Set `my/lsp-booster-enabled` to nil to opt out.
+- Garbage collection waits for idle time (gcmh), and nothing is native-compiled
+  in the background while you work.

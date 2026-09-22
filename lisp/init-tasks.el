@@ -1,7 +1,7 @@
 ;;; init-tasks.el --- Project tasks and focused tests -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Finite jobs run in compilation-mode. Interactive jobs run in Ghostel.
+;; Finite jobs run in compilation-mode.  Interactive jobs run in a terminal.
 ;; Commands are selected explicitly; opening a project never executes them.
 
 ;;; Code:
@@ -135,8 +135,7 @@
          (command (my/task-read-command root))
          (default-directory root))
     (when (string-empty-p (string-trim command)) (user-error "Empty task command"))
-    (with-current-buffer (my/project-ghostel-new)
-      (ghostel-send-string (concat command "\n")))))
+    (my/terminal-send (my/project-ghostel-new) command)))
 
 (defun my/task-js-runner (root)
   "Return the installed test runner declared by ROOT's package manifest."
@@ -146,6 +145,14 @@
     (cond ((assq 'vitest dependencies) "vitest")
           ((assq 'jest dependencies) "jest")
           (t (user-error "No Vitest/Jest dependency here; use SPC r r for a custom task")))))
+
+(defun my/task-js-exec (root)
+  "Return the command prefix that runs ROOT's installed binaries, never installing."
+  (pcase (my/task-package-manager root)
+    ("npm" "npm exec --no --")
+    ("yarn" "yarn exec")
+    ("pnpm" "pnpm exec")
+    (manager (concat manager " x --no-install"))))
 
 (defun my/task-nearest-js-test ()
   "Return the enclosing test's full literal title, including describe blocks."
@@ -200,12 +207,8 @@ With NEAREST, narrow to the surrounding supported test."
                              (user-error "Place point inside a pytest test"))
                            (concat "::" (replace-regexp-in-string "\\." "::" name))))))))
      ((derived-mode-p 'js-mode 'js-ts-mode 'typescript-mode 'typescript-ts-mode 'tsx-ts-mode)
-      (let* ((runner (my/task-js-runner root))
-             (manager (my/task-package-manager root))
-             (exec (pcase manager ("npm" "npm exec --no --")
-                          ("yarn" "yarn exec") (_ (concat manager " x --no-install")))))
-        (when (equal manager "pnpm") (setq exec "pnpm exec"))
-        (concat exec " " runner (if (equal runner "vitest") " run " " --runInBand ")
+      (let ((runner (my/task-js-runner root)))
+        (concat (my/task-js-exec root) " " runner (if (equal runner "vitest") " run " " --runInBand ")
                 (when (equal runner "jest") "--runTestsByPath ")
                 (shell-quote-argument file)
                 (when nearest
@@ -236,6 +239,25 @@ With NEAREST, narrow to the surrounding supported test."
   "Run the nearest supported test."
   (interactive)
   (let ((root (my/task-root))) (my/task-run root (my/task-test-command root t) t)))
+
+(defun my/task-test-all-command (root)
+  "Return the command that runs every test in ROOT."
+  (cond
+   ((seq-some (lambda (file) (file-exists-p (expand-file-name file root)))
+              '("pyproject.toml" "pytest.ini" "setup.cfg" "tox.ini"))
+    (my/task-python-command root))
+   ((file-exists-p (expand-file-name "package.json" root))
+    (let ((runner (my/task-js-runner root)))
+      (concat (my/task-js-exec root) " " runner (when (equal runner "vitest") " run"))))
+   ((file-exists-p (expand-file-name "go.mod" root)) "go test ./...")
+   ((file-exists-p (expand-file-name "Cargo.toml" root)) "cargo test")
+   (t (user-error "No known test runner here; use SPC r r for a custom task"))))
+
+(defun my/project-test-all ()
+  "Run every test in the current project."
+  (interactive)
+  (let ((root (my/task-root)))
+    (my/task-run root (my/task-test-all-command root) t)))
 
 (defun my/project-test-last ()
   "Repeat this project's last focused test, even after running other tasks."

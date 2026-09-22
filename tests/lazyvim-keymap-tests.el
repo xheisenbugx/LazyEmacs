@@ -172,15 +172,197 @@
       (my/git-copy-link) (should-not seen)
       (my/git-browse) (should seen))))
 
+;; LazyVim's documented keys, resolved through the real Evil keymaps.
+(defconst my/lazyvim-reference-keys
+  '(("SPC SPC" . project-find-file) ("SPC ," . consult-project-buffer)
+    ("SPC /" . consult-ripgrep) ("SPC :" . my/command-history)
+    ("SPC e" . my/project-explorer) ("SPC E" . dirvish-side)
+    ("SPC l" . list-packages) ("SPC n" . my/messages)
+    ("SPC b d" . kill-current-buffer) ("SPC b o" . my/kill-other-file-buffers)
+    ("SPC c a" . my/lsp-code-actions) ("SPC c A" . my/lsp-source-actions)
+    ("SPC c m" . my/lsp-install-server) ("SPC c f" . my/format-buffer)
+    ("SPC d b" . dape-breakpoint-toggle) ("SPC d c" . my/debug-continue)
+    ("SPC d O" . dape-next) ("SPC d p p" . my/profiler-toggle)
+    ("SPC f f" . project-find-file) ("SPC f n" . my/new-file)
+    ("SPC g g" . magit-status) ("SPC g G" . my/git-status-cwd)
+    ("SPC g L" . my/git-log-cwd) ("SPC g S" . magit-stash)
+    ("SPC q q" . save-buffers-kill-emacs) ("SPC q s" . my/session-restore)
+    ("SPC q l" . my/session-restore) ("SPC q d" . my/session-stop-saving)
+    ("SPC s j" . evil-collection-consult-jump-list) ("SPC s t" . my/search-todos)
+    ("SPC s \"" . evil-show-registers) ("SPC s k" . describe-bindings)
+    ("SPC t T" . my/project-test-all) ("SPC u C" . consult-theme)
+    ("SPC u g" . indent-bars-mode) ("SPC u s" . my/toggle-spelling)
+    ("SPC u r" . my/redraw) ("SPC x t" . my/search-todos)
+    ("SPC w s" . evil-window-split) ("SPC w v" . evil-window-vsplit)
+    ("SPC w o" . delete-other-windows) ("SPC w w" . evil-window-next)
+    ("SPC w d" . delete-window) ("SPC w m" . my/window-zoom)
+    ("SPC TAB l" . my/session-last-tab) ("SPC TAB o" . my/session-close-other-tabs)
+    ("]t" . hl-todo-next) ("[t" . hl-todo-previous)
+    ("gsa" . evil-surround-region) ("gsd" . evil-surround-delete)
+    ("gsr" . evil-surround-change) ("C-<up>" . evil-window-increase-height))
+  "Keys from https://www.lazyvim.org/keymaps and their LazyEmacs commands.")
+
+(ert-deftest my/lazyvim-reference-keys-resolve ()
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (evil-local-mode 1)
+    (evil-normal-state)
+    (dolist (pair my/lazyvim-reference-keys)
+      (should (equal (cons (car pair) (key-binding (kbd (car pair))))
+                     pair)))))
+
+(ert-deftest my/lazyvim-leader-groups-have-labels-and-c-c-aliases ()
+  (pcase-dolist (`(,key ,description ,map ,alias) lazyemacs-leader-groups)
+    ;; Lookups strip labels, so read the raw (DESCRIPTION . MAP) binding.
+    (should (equal (alist-get (aref (key-parse key) 0) (cdr my/leader-map))
+                   (cons description map)))
+    (when alias
+      (should (eq (keymap-lookup global-map (concat "C-c " alias)) map))))
+  ;; Which Key reads (DESCRIPTION . COMMAND) bindings for its labels.
+  (should (equal (alist-get ?a (cdr my/leader-code-map))
+                 '("Code action" . my/lsp-code-actions)))
+  (should (eq (keymap-lookup global-map "C-c f f") #'project-find-file)))
+
+(ert-deftest my/lazyvim-visual-shift-keeps-selection ()
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (insert "a\nb\n")
+    (evil-local-mode 1)
+    (evil-visual-select (point-min) (1- (point-max)) 'line)
+    (should (eq (key-binding ">") #'my/visual-shift-right))
+    (my/visual-shift-right)
+    (should (evil-visual-state-p))
+    (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                   (let ((indent (make-string evil-shift-width ?\s)))
+                     (concat indent "a\n" indent "b\n"))))))
+
 (ert-deftest my/lazyvim-no-missing-leader-commands ()
-  (dolist (map (list my/leader-buffer-map my/leader-code-map my/leader-error-map
-                     my/leader-file-map my/leader-git-map my/leader-search-map
-                     my/leader-test-map my/leader-ui-map my/leader-workspace-map))
-    (cl-labels ((check (map)
-                  (map-keymap (lambda (_key command)
-                                (cond ((keymapp command) (check command))
-                                      ((symbolp command) (should (commandp command))))) map)))
-      (check map))))
+  (cl-labels ((check (map)
+                (map-keymap (lambda (key command)
+                              (when (and (consp command) (stringp (car command)))
+                                (setq command (cdr command)))
+                              (cond ((keymapp command) (check command))
+                                    ((and command (symbolp command))
+                                     (should (equal (cons key (commandp command))
+                                                    (cons key t))))))
+                            map)))
+    (check my/leader-map)))
+
+(ert-deftest my/lazyvim-dashboard-renders-actions-and-leader ()
+  (let ((recentf-list nil))
+    (with-current-buffer (lazyemacs-dashboard-buffer)
+      (unwind-protect
+          (progn
+            (should (derived-mode-p 'lazyemacs-dashboard-mode))
+            (should (string-match-p "Find file" (buffer-string)))
+            (should (string-match-p "Restore session" (buffer-string)))
+            (should (eq (keymap-lookup lazyemacs-dashboard-mode-map "f") #'find-file))
+            (should (eq (keymap-lookup lazyemacs-dashboard-mode-map "SPC") my/leader-map))
+            (should (eq (evil-initial-state 'lazyemacs-dashboard-mode) 'emacs)))
+        (kill-buffer)))))
+
+(ert-deftest my/lazyvim-test-all-detects-project-runner ()
+  (let ((root (make-temp-file "lazyemacs-test-all-" t)))
+    (unwind-protect
+        (progn
+          (should-error (my/task-test-all-command root) :type 'user-error)
+          (write-region "module x\n" nil (expand-file-name "go.mod" root))
+          (should (equal (my/task-test-all-command root) "go test ./..."))
+          (write-region "{\"devDependencies\": {\"vitest\": \"1\"}}" nil
+                        (expand-file-name "package.json" root))
+          (write-region "" nil (expand-file-name "pnpm-lock.yaml" root))
+          (should (equal (my/task-test-all-command root) "pnpm exec vitest run")))
+      (delete-directory root t))))
+
+(ert-deftest my/lazyvim-terminal-falls-back-to-eshell-without-modules ()
+  (cl-letf (((symbol-function 'my/ghostel-available-p) #'ignore))
+    (save-window-excursion
+      (let ((buffer (my/terminal-create "*lazyemacs-fallback-test*" nil)))
+        (unwind-protect
+            (progn
+              (should (eq (window-buffer) buffer))
+              (should (equal (buffer-name buffer) "*lazyemacs-fallback-test*"))
+              (should (eq (buffer-local-value 'major-mode buffer) 'eshell-mode)))
+          (let ((kill-buffer-query-functions nil)) (kill-buffer buffer)))))))
+
+(ert-deftest my/lazyvim-clipboard-tools-require-a-session ()
+  (cl-letf (((symbol-function 'executable-find)
+             (lambda (name) (member name '("wl-copy" "xclip")))))
+    (let ((process-environment (cons "WAYLAND_DISPLAY" process-environment)))
+      (setenv "DISPLAY" ":0")
+      (should (eq (car (my/clipboard-command my/clipboard-commands)) 'xclip)))
+    (let ((process-environment (copy-sequence process-environment)))
+      (setenv "WAYLAND_DISPLAY" "wayland-0")
+      (should (eq (car (my/clipboard-command my/clipboard-commands)) 'wl-copy)))))
+
+(ert-deftest my/lazyvim-grammar-install-reports-without-network ()
+  (let ((lazyemacs-grammars '(lazyemacs-no-such-language))
+        (treesit-language-source-alist nil)
+        (lazyemacs-grammar-libraries nil)
+        called)
+    (cl-letf (((symbol-function 'treesit-install-language-grammar)
+               (lambda (&rest _) (setq called t))))
+      (lazyemacs-install-grammars)
+      (should-not called))))
+
+;;; Generated keymap reference
+
+(defun my/leader-markdown--key (prefix event)
+  "Return PREFIX followed by EVENT as a Markdown table cell."
+  (let ((key (string-trim (concat prefix " " (key-description (vector event))))))
+    (format "<kbd>%s</kbd>" (string-replace "|" "&#124;" key))))
+
+(defun my/leader-markdown--rows (map prefix)
+  "Return table rows for MAP's labelled bindings below PREFIX, in order."
+  (let (rows)
+    (dolist (entry (reverse (cdr map)))
+      (when (and (consp entry) (consp (cdr entry)) (stringp (cadr entry))
+                 (not (eq (car entry) 'tab)))
+        (let ((description (cadr entry)) (binding (cddr entry)))
+          (setq rows
+                (append rows
+                        (if (keymapp binding)
+                            (my/leader-markdown--rows
+                             binding (concat prefix " " (key-description (vector (car entry)))))
+                          (list (format "| %s | %s |"
+                                        (my/leader-markdown--key prefix (car entry))
+                                        (string-replace "|" "&#124;" description)))))))))
+    rows))
+
+(defun my/leader-markdown ()
+  "Render the complete SPC leader as Markdown."
+  (let ((sections
+         (list (string-join
+                (append '("### Top level" "" "| Keys | Action |" "|---|---|")
+                        (mapcar (pcase-lambda (`(,key ,description ,_))
+                                  (format "| %s | %s |" (my/leader-markdown--key "SPC" (aref (key-parse key) 0))
+                                          (string-replace "|" "&#124;" description)))
+                                lazyemacs-leader-commands))
+                "\n"))))
+    (pcase-dolist (`(,key ,description ,map ,alias) lazyemacs-leader-groups)
+      (unless (equal key "<tab>")
+        (push (string-join
+               (append (list (format "### <kbd>SPC %s</kbd> %s%s" key description
+                                     (if alias (format " (also <kbd>C-c %s</kbd>)" alias) ""))
+                             "" "| Keys | Action |" "|---|---|")
+                       (my/leader-markdown--rows map (concat "SPC " key)))
+               "\n")
+              sections)))
+    (concat (string-join (nreverse sections) "\n\n") "\n")))
+
+(ert-deftest my/lazyvim-keymap-docs-match-leader ()
+  "docs/keymaps.md must match the leader.  Regenerate with LAZYEMACS_UPDATE_DOCS=1."
+  (let* ((file (expand-file-name "docs/keymaps.md" lazyemacs-root-directory))
+         (begin "<!-- BEGIN GENERATED LEADER: run the keymap tests with LAZYEMACS_UPDATE_DOCS=1 -->\n")
+         (end "<!-- END GENERATED LEADER -->")
+         (text (with-temp-buffer (insert-file-contents file) (buffer-string)))
+         (start (+ (string-search begin text) (length begin)))
+         (stop (string-search end text))
+         (expected (my/leader-markdown)))
+    (if (getenv "LAZYEMACS_UPDATE_DOCS")
+        (with-temp-file file
+          (insert (substring text 0 start) expected (substring text stop)))
+      (should (equal (substring text start stop) expected)))))
 
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "my/lazyvim-")

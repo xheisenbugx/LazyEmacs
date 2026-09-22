@@ -6,6 +6,8 @@
 
 ;;; Code:
 
+(require 'seq)
+
 (setq scroll-step 1
       scroll-conservatively 101
       scroll-margin 3
@@ -59,20 +61,64 @@
 (use-package comment-dwim-2
   :commands comment-dwim-2)
 
-(defun my-copy-to-osx (text)
-  (let ((process-connection-type nil))
-    (let ((proc (start-process "pbcopy" nil "pbcopy")))
-      (process-send-string proc text)
-      (process-send-eof proc))))
+;;; System clipboard in terminal frames
 
-(defun my-paste-from-osx ()
-  (shell-command-to-string "pbpaste"))
+;; Graphical frames already share the system clipboard.  Emacs in a terminal
+;; does not, so yanking with `y' would never reach other applications.  Use the
+;; platform's clipboard tools when they exist: pbcopy/pbpaste on macOS,
+;; wl-copy/wl-paste on Wayland, xclip or xsel on X11.  Emacs's OSC 52 support
+;; (`xterm-extra-capabilities') remains an alternative over SSH.
 
-;; Only hook these functions up if we are in a terminal AND running on macOS
-(when (and (not (display-graphic-p))
-           (eq system-type 'darwin))
-  (setq interprogram-cut-function 'my-copy-to-osx)
-  (setq interprogram-paste-function 'my-paste-from-osx))
+(defconst my/clipboard-commands
+  '((pbcopy "pbcopy") (wl-copy "wl-copy") (xclip "xclip" "-selection" "clipboard")
+    (xsel "xsel" "--clipboard" "--input"))
+  "Copy commands tried in order, as (NAME PROGRAM ARGS...).")
+
+(defconst my/clipboard-paste-commands
+  '((pbpaste "pbpaste") (wl-paste "wl-paste" "--no-newline")
+    (xclip "xclip" "-selection" "clipboard" "-o") (xsel "xsel" "--clipboard" "--output"))
+  "Paste commands tried in order, as (NAME PROGRAM ARGS...).")
+
+(defun my/clipboard-command (commands)
+  "Return the first entry of COMMANDS whose program is installed."
+  (seq-find (lambda (entry)
+              (and (executable-find (cadr entry))
+                   ;; Wayland tools need a Wayland session, X11 tools a display.
+                   (pcase (car entry)
+                     ((or 'wl-copy 'wl-paste) (getenv "WAYLAND_DISPLAY"))
+                     ((or 'xclip 'xsel) (getenv "DISPLAY"))
+                     (_ t))))
+            commands))
+
+(defun my/clipboard-copy (text)
+  "Copy TEXT to the system clipboard from a terminal frame."
+  (when-let* ((entry (my/clipboard-command my/clipboard-commands)))
+    (let* ((process-connection-type nil)
+           (process (apply #'start-process "clipboard-copy" nil (cdr entry))))
+      (process-send-string process text)
+      (process-send-eof process))))
+
+(defun my/clipboard-paste ()
+  "Return the system clipboard's text, or nil if it matches the last kill."
+  (when-let* ((entry (my/clipboard-command my/clipboard-paste-commands)))
+    (let ((text (with-output-to-string
+                  (with-current-buffer standard-output
+                    (apply #'call-process (cadr entry) nil t nil (cddr entry))))))
+      (unless (or (string-empty-p text) (equal text (car kill-ring)))
+        text))))
+
+(defun my/clipboard-setup-terminal ()
+  "Share the kill ring with the system clipboard in terminal-only sessions.
+Daemons are skipped: their graphical frames use the native clipboard."
+  (when (and (not (display-graphic-p))
+             (not (daemonp))
+             (not noninteractive)
+             (not (eq system-type 'windows-nt))
+             (my/clipboard-command my/clipboard-commands))
+    (setq interprogram-cut-function #'my/clipboard-copy
+          interprogram-paste-function #'my/clipboard-paste)))
+
+(my/clipboard-setup-terminal)
 
 ;; Only whitespace on edited lines is removed, so saving an old file does not
 ;; create a huge unrelated whitespace diff.

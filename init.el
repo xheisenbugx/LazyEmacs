@@ -40,12 +40,14 @@
                          init-structure
                          init-development
                          init-lsp-booster
+                         init-debug
                          init-tools
                          init-tasks
                          init-session
                          init-org
                          init-keymaps
-                         init-local-actions))
+                         init-local-actions
+                         init-dashboard))
         (require feature))
 
       (when lazyemacs-enable-mail

@@ -29,8 +29,9 @@
 (size-indication-mode 1)
 (setq-default cursor-type 'bar)
 
-;; Theme choices come from the distribution options, including a bundled
-;; Modus light theme and the installed Catppuccin dark theme by default.
+;; Theme choices come from the distribution options: Catppuccin Mocha for dark
+;; and Emacs's bundled Modus Operandi for light.  `SPC u b' toggles them and
+;; `SPC u C' previews any installed theme.
 (defvaralias 'my/dark-theme 'lazyemacs-dark-theme)
 (defvaralias 'my/light-theme 'lazyemacs-light-theme)
 
@@ -101,6 +102,30 @@
   (doom-modeline-minor-modes nil)
   (doom-modeline-workspace-name nil)
   (doom-modeline-project-detection 'project))
+
+;; TODO/FIXME/HACK highlighting, like LazyVim's todo-comments.nvim.  `]t'/`[t'
+;; move between them and `SPC s t' searches the whole project.
+(use-package hl-todo
+  :hook ((prog-mode conf-mode yaml-mode) . hl-todo-mode)
+  :commands (hl-todo-next hl-todo-previous)
+  :custom
+  (hl-todo-keyword-faces
+   '(("TODO" . "#89b4fa") ("FIXME" . "#f38ba8") ("FIX" . "#f38ba8")
+     ("BUG" . "#f38ba8") ("HACK" . "#fab387") ("WARN" . "#f9e2af")
+     ("WARNING" . "#f9e2af") ("PERF" . "#cba6f7") ("NOTE" . "#a6e3a1")
+     ("TEST" . "#94e2d5"))))
+
+;; Indent guides, like LazyVim's snacks.indent.  Toggle with `SPC u g'.
+;; Terminal frames draw the guides with characters instead of stipples.
+(use-package indent-bars
+  :hook ((prog-mode yaml-mode yaml-ts-mode) . indent-bars-mode)
+  :custom
+  (indent-bars-prefer-character (not (display-graphic-p)))
+  (indent-bars-color '(highlight :face-bg t :blend 0.25))
+  (indent-bars-highlight-current-depth '(:blend 0.6))
+  (indent-bars-width-frac 0.15)
+  (indent-bars-pad-frac 0.1)
+  (indent-bars-no-descend-string t))
 
 (provide 'init-ui)
 ;;; init-ui.el ends here

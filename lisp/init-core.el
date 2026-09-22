@@ -1,4 +1,4 @@
-;;; init-core.el --- Safe defaults, persistence, and macOS integration -*- lexical-binding: t; -*-
+;;; init-core.el --- Safe defaults, persistence, and platform integration -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 ;; This module contains behavior that should be available everywhere, before
@@ -72,12 +72,13 @@
   :config
   (gcmh-mode 1))
 
-;; GUI applications on macOS do not inherit the interactive shell's PATH.
-;; Import it early so lsp-mode, formatters, ripgrep, and Ghostel find the same tools
-;; that are available in Terminal.app.
+;; GUI applications launched from the Dock, a desktop launcher, or systemd do
+;; not inherit the interactive shell's PATH.  Import it early so lsp-mode,
+;; formatters, ripgrep, and Ghostel find the same tools as your terminal.
+;; Windows GUI Emacs already receives the system PATH.
 (use-package exec-path-from-shell
-  :if (and (eq system-type 'darwin)
-           (or (daemonp) (memq window-system '(mac ns x))))
+  :if (and (memq system-type '(darwin gnu/linux berkeley-unix))
+           (or (daemonp) (memq window-system '(mac ns x pgtk))))
   :demand t
   :custom
   (exec-path-from-shell-variables
@@ -132,7 +133,8 @@
   :init
   (global-auto-revert-mode 1)
   :custom
-  ;; Prefer macOS file notifications over scanning every buffer each interval.
+  ;; Prefer file notifications (FSEvents, inotify, w32notify) over scanning
+  ;; every buffer each interval.
   ;; Dired and other non-file buffers remain manually refreshable with `g'.
   (auto-revert-avoid-polling t)
   (global-auto-revert-non-file-buffers nil)

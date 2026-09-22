@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest a LazyVim feature or keymap that is missing, or a new idea
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: Describe the workflow. If it exists in LazyVim, link the plugin or keymap.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior or keys
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Emacs packages or alternatives you know of

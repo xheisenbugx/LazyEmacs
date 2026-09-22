@@ -187,6 +187,24 @@
   (interactive)
   (my/search-word t))
 
+(defconst my/todo-keywords '("TODO" "FIX" "FIXME" "BUG" "HACK" "WARN" "PERF" "NOTE" "TEST")
+  "Comment keywords found by `SPC s t', matching LazyVim's todo-comments.")
+
+(defun my/search-keywords (keywords)
+  "Search the project for comment KEYWORDS followed by a colon.
+Consult reads Emacs regexp syntax and converts it for ripgrep."
+  (consult-ripgrep nil (concat "\\b\\(" (string-join keywords "\\|") "\\):")))
+
+(defun my/search-todos ()
+  "Search the project for TODO-style comments."
+  (interactive)
+  (my/search-keywords my/todo-keywords))
+
+(defun my/search-fixmes ()
+  "Search the project for TODO, FIX, and FIXME comments only."
+  (interactive)
+  (my/search-keywords '("TODO" "FIX" "FIXME")))
+
 (defun my/search-replace-edit-export ()
   "Enter native editing in a newly exported grep buffer."
   (when (derived-mode-p 'grep-mode) (my/local-actions-edit)))
