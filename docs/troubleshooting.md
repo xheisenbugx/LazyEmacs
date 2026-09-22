@@ -12,6 +12,7 @@ when you [open an issue](https://github.com/xheisenbugx/LazyEmacs/issues).
 | "LazyEmacs requires Emacs 31.1 or newer" | Run `emacs --version`. Your launcher may start a different Emacs than your terminal. |
 | Your old configuration starts instead | Launch with `--init-directory`, and check for `~/.emacs`, `~/.emacs.el`, and `~/.config/emacs`. |
 | A package fails to install | Read `*Warnings*`, check HTTPS and Git access, run `M-x my/package-refresh`, and restart. `emacs --batch --load scripts/bootstrap.el` shows the full error in the terminal. |
+| "Failed to verify signature" on Windows | Install GnuPG (`winget install GnuPG.GnuPG`) and put it before Git's `usr\bin` on `PATH`. |
 | Icons are boxes | `M-x nerd-icons-install-fonts`, then restart (Windows: install a Nerd Font manually). |
 | The font does not change | Check the exact family name with `M-: (font-family-list)`. Fonts apply to graphical frames only. |
 | <kbd>SPC /</kbd> finds nothing | Make sure `rg` is listed by the doctor and that you are inside a project. |

@@ -58,6 +58,9 @@ visible."
 ;; directories, and so newly installed packages are immediately on `load-path'.
 (setq package-quickstart-file
       (locate-user-emacs-file "var/package-quickstart.el"))
+;; On a fresh checkout nothing has created var/ yet, and writing the cache
+;; after the first package installation would fail.
+(make-directory (file-name-directory package-quickstart-file) t)
 
 ;; GNU and NonGNU ELPA are preferred for stable releases.  MELPA supplies the
 ;; actively developed packages that are not published in those archives.

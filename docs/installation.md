@@ -66,8 +66,12 @@ often reserve Super keys; every Super shortcut has a leader equivalent.
 ### Windows
 
 ```powershell
-winget install GNU.Emacs Git.Git BurntSushi.ripgrep.MSVC sharkdp.fd
+winget install GNU.Emacs Git.Git GnuPG.GnuPG BurntSushi.ripgrep.MSVC sharkdp.fd
 ```
+
+GnuPG is needed to verify package signatures: the `gpg` bundled with Git for
+Windows cannot, and package installation then fails with "Failed to verify
+signature". Make sure GnuPG's `bin` directory comes before Git's on `PATH`.
 
 Scoop (`scoop install emacs git ripgrep fd`) works too. Emacs looks for its
 configuration in `%APPDATA%\.emacs.d` unless `HOME` is set, so the simplest
