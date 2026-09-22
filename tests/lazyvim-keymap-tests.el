@@ -12,7 +12,7 @@
     (evil-normal-state)
     (dolist (pair '(("H" . previous-buffer) ("L" . next-buffer)
                     ("gi" . evil-insert-resume) ("gI" . my/lsp-find-implementations)
-                    ("SPC f t" . my/project-ghostel) ("SPC f T" . my/directory-ghostel)
+                    ("SPC f t" . my/project-ghostel-new) ("SPC f T" . my/directory-ghostel)
                     ("SPC f p" . project-switch-project) ("SPC c d" . my/show-diagnostic-at-point)
                     ("SPC c R" . crux-rename-file-and-buffer) ("SPC g s" . magit-status)
                     ("SPC g h s" . diff-hl-stage-current-hunk)
