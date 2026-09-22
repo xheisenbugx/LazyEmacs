@@ -59,7 +59,7 @@ and your terminal may use different Emacs installations.
 
 On macOS, Command maps to Super, Option to Meta, and right Option remains
 available for international characters. PATH is imported from your shell for
-GUI sessions. Other systems keep their usual modifiers. Window-manager
+GUI and daemon sessions. Other systems keep their usual modifiers. Window-manager
 shortcuts can intercept Super keys; use the `SPC TAB` alternatives instead.
 
 ## Installation
@@ -149,8 +149,9 @@ Git and excluded from the source exporter.
 - **`user/early.el`** loads before package setup and feature modules. Put
   `lazyemacs-*` startup settings, mail identity, and package-specific `defcustom`
   defaults here. This file runs after Emacs's real `early-init.el`.
-- **`user/custom.el`** holds changes saved through Customize. It loads after
-  package bootstrap and before feature modules. Explicit module defaults may
+- **`user/custom.el`** holds changes saved through Customize. It loads before
+  package bootstrap, so startup options such as offline mode take effect in time.
+  Explicit module defaults may
   override ordinary package settings saved here.
 - **`user/config.el`** loads last. Put personal bindings, hooks, and overrides
   here. Use `with-eval-after-load` for packages that have not loaded yet.
@@ -195,15 +196,17 @@ Set startup values in `user/early.el` and restart.
 |---|---|---|
 | `lazyemacs-enable-mail` | `nil` | Load mu4e integration and expose mail leader menu |
 | `lazyemacs-enable-recovery` | `t` | Enable backups and periodic buffer auto-save copies |
+| `lazyemacs-offline` | `nil`, or `t` with `LAZYEMACS_OFFLINE=1` | Prevent package downloads, refreshes, and upgrades; report missing dependencies |
+| `lazyemacs-prefer-tree-sitter` | `t` | Prefer native modes when compatible grammars are already installed |
 | `lazyemacs-dark-theme` | `catppuccin` | Startup/dark toggle theme |
 | `lazyemacs-light-theme` | `modus-operandi-tinted` | Light toggle theme |
-| `lazyemacs-fonts` | JetBrainsMono, Iosevka, Menlo, DejaVu Sans Mono | First installed family wins |
+| `lazyemacs-fonts` | BlexMono, JetBrainsMono, Iosevka, Menlo, DejaVu Sans Mono | First installed family wins |
 | `lazyemacs-font-height` | `140` | Font size in tenths of a point |
 | `lazyemacs-org-directory` | `~/org/` | Agenda/capture directory |
 | `my/lsp-visual-extras` | `nil` | LSP breadcrumbs, highlights, hints, action indicator |
 | `my/lsp-diagnostics-enabled` | `t` | Diagnostics preference |
 | `my/lsp-auto-start-delay` | `0.25` | Idle seconds before automatic LSP startup |
-| `my/lsp-booster-enabled` | `t` | Use installed booster for local stdio servers |
+| `my/lsp-booster-enabled` | `t` | Use installed booster for local stdio servers with bytecode conversion disabled |
 
 The UI retains Emacs's existing font if none of the preferred families exists.
 A custom theme symbol must name an installed theme. Catppuccin is installed by
@@ -228,7 +231,7 @@ LazyEmacs/
 ```
 
 Startup order is: Emacs `early-init.el` → version check → distribution options
-→ private `early.el` → package initialization → private Customize file → core,
+→ private `early.el` → private Customize file → package initialization → core,
 UI, completion, editing, Evil, navigation/workspaces, Git, structure,
 development/booster, terminals, tasks, session, Org, keymaps, local actions →
 optional mail → private `config.el`.
@@ -268,6 +271,17 @@ saved source/package snapshot. Do not delete private configuration or session
 data as the first troubleshooting step. Package archives and GitHub must be
 reachable on a new machine even if an existing machine starts offline.
 
+For an installed setup with package downloads disabled:
+
+```sh
+LAZYEMACS_OFFLINE=1 emacs --init-directory ~/.config/lazyemacs
+```
+
+Missing packages fail with their names instead of trying the network. Unset the
+environment variable and restart to install them. Offline mode covers package
+management; it does not disable networking in LSP, Git, terminals, or mail.
+Startup only refreshes archive metadata when a dependency is missing.
+
 ## Language setup
 
 LazyEmacs configures editor integrations; it does not install language runtimes,
@@ -288,7 +302,9 @@ project dependencies, servers, formatters, compilers, or test runners.
 Ensure executables are on Emacs's `exec-path`, not merely available in an
 unrelated terminal. Activate the appropriate project environment before
 starting the server. `SPC c l` shows LSP information. Use `C-c L` for the full LSP command map
-or `M-x my/lsp-start`, `my/lsp-restart`, and `my/lsp-shutdown` for lifecycle actions. Definitions use xref when LSP is not attached.
+or `M-x my/lsp-start`, `my/lsp-restart`, and `my/lsp-shutdown` for lifecycle actions.
+Definitions and references use xref when LSP is not attached; file symbols use
+Imenu. The diagnostics toggle requires an attached server.
 
 Grammar libraries are separate from language servers. Configure a source in
 `treesit-language-source-alist`, run `M-x treesit-install-language-grammar`, and
@@ -303,10 +319,15 @@ restart or reselect the major mode. For example:
              "master" "tsx/src")))
 ```
 
-Install both `typescript` and `tsx` when using both file types. This configuration
-automatically selects their native modes when grammars are available. Other
-languages may need explicit mode remapping in your private config. Grammars
-must be compatible with the tree-sitter ABI supported by your Emacs build.
+Install both `typescript` and `tsx` when using both file types. Without the
+appropriate grammar, `.ts`, `.mts`, `.cts`, and `.tsx` use `typescript-mode`;
+TSX fallback provides basic TypeScript editing, without native JSX parsing.
+JavaScript, Python, Go, Rust, CSS, JSON, YAML, and shell modes also use their
+native counterparts when compatible grammars are installed. Private remappings
+take precedence. Grammar availability is checked at startup, not on every
+preview. After installation, run `M-x lazyemacs-refresh-language-modes` and
+reopen the file. Set `lazyemacs-prefer-tree-sitter` to nil to keep regular modes.
+`SPC h D` lists grammar availability; grammars must match your Emacs tree-sitter ABI.
 
 Formatting is explicit with `SPC c f`; `SPC u f` toggles global format-on-save; `SPC u F` toggles it for the
 current buffer. Project Biome configuration selects Biome for supported web
@@ -414,8 +435,10 @@ emacs --init-directory ~/.config/lazyemacs --no-desktop
 
 Use `emacs -Q` for an independent rescue session. Avoid loading untrusted
 project-local commands or executing task/Babel content you have not reviewed.
-The optional booster executes its encoded bytecode responses; use only trusted
-local booster/server executables, or disable `my/lsp-booster-enabled`.
+The optional booster uses `--disable-bytecode`: buffering remains enabled while
+Emacs decodes ordinary JSON. Restart Emacs when updating from the earlier
+bytecode integration; reloading that module while old servers are running is
+not supported.
 
 ## Validation and contributing
 
@@ -426,7 +449,15 @@ packages and checks Lisp syntax and the public configuration helpers:
 emacs -Q --batch --load scripts/check.el
 ```
 
-After completing package installation and installing the TypeScript grammar:
+After completing package installation (including `typescript-mode`) and
+installing the TypeScript grammar, run all suites with one command:
+
+```sh
+python3 scripts/test.py
+```
+
+`python3 scripts/test.py --offline-only` runs the package-free checks. Pass
+`--emacs /path/to/emacs` to select an executable. To run individual suites:
 
 ```sh
 emacs -Q --batch --load scripts/integration.el
@@ -438,12 +469,14 @@ LAZYEMACS_TEST_SUITE=session-actions-tests.el \
   emacs -Q --batch --load scripts/integration.el
 LAZYEMACS_TEST_SUITE=lazyvim-keymap-tests.el \
   emacs -Q --batch --load scripts/integration.el
+LAZYEMACS_TEST_SUITE=reliability-tests.el \
+  emacs -Q --batch --load scripts/integration.el
 git diff --check
 ```
 
 The integration runner uses disposable private/runtime directories while
-reusing this checkout's installed packages and grammar libraries. Missing
-packages can still trigger installation. It does not launch live terminal
+reusing this checkout's installed packages and grammar libraries. Package
+downloads are disabled; missing dependencies fail explicitly. It does not launch live terminal
 processes, deliver mail, or test external project services. Full clean-network
 bootstrap and graphical behavior need separate manual checks on each platform.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for review expectations.

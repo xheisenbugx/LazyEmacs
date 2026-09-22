@@ -33,6 +33,9 @@
 (defun my/session-save ()
   "Save file buffers and native tab groups, without saving buffer contents."
   (interactive)
+  (when-let* ((owner (desktop-owner my/session-directory)))
+    (unless (eq owner (emacs-pid))
+      (user-error "Session is locked by Emacs PID %s; close that session before saving" owner)))
   (make-directory my/session-directory t)
   (desktop-save my/session-directory)
   (message "Saved project sessions"))

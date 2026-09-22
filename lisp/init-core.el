@@ -77,7 +77,7 @@
 ;; that are available in Terminal.app.
 (use-package exec-path-from-shell
   :if (and (eq system-type 'darwin)
-           (memq window-system '(mac ns x)))
+           (or (daemonp) (memq window-system '(mac ns x))))
   :demand t
   :custom
   (exec-path-from-shell-variables
@@ -157,11 +157,11 @@
   "Evaluate one configuration module explicitly.
 Restart Emacs after changing early-init.el or package initialization."
   (interactive)
-  (let* ((directory (expand-file-name "lisp/" user-emacs-directory))
+  (let* ((directory (expand-file-name "lisp/" lazyemacs-root-directory))
          (file (completing-read "Reload module: "
                                 (directory-files directory nil "\\.el\\'") nil t)))
-    (when (equal file "init-packages.el")
-      (user-error "Restart Emacs after changing package initialization"))
+    (when (member file '("init-packages.el" "init-package-policy.el" "init-lsp-booster.el"))
+      (user-error "Restart Emacs after changing package initialization or LSP transport"))
     (load-file (expand-file-name file directory))
     (message "Evaluated %s; removed settings may still require a restart" file)))
 

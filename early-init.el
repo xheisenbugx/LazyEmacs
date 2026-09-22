@@ -22,12 +22,8 @@
 (setq gc-cons-threshold most-positive-fixnum
       gc-cons-percentage 0.6)
 
-;; File-name handlers support features such as TRAMP and compressed files, but
-;; consulting the handler list for every file is unnecessary during local
-;; startup.  Save the list and restore it once initialization finishes.
-(defvar my/startup-file-name-handler-alist file-name-handler-alist
-  "Value of `file-name-handler-alist' before Emacs initialization.")
-(setq file-name-handler-alist nil)
+;; Keep file-name handlers available.  Private configuration, package files,
+;; and restored desktops can use compressed or remote files during startup.
 
 ;; Avoid frame resizing and font-cache compaction while the first frame is
 ;; being assembled.  Both can cause visible startup flicker.
@@ -53,26 +49,26 @@
 
 (defun my/restore-startup-state ()
   "Restore settings that were changed temporarily for startup."
-  (setq file-name-handler-alist
-        (delete-dups
-         (append file-name-handler-alist
-                 my/startup-file-name-handler-alist)))
-
   ;; If gcmh is active, keep its high threshold.  The fallback is intentionally
   ;; moderate for sessions started without the rest of this configuration.
   (setq gc-cons-threshold
         (if (bound-and-true-p gcmh-mode)
             gcmh-high-cons-threshold
           (* 64 1024 1024))
-        gc-cons-percentage 0.1)
+        gc-cons-percentage 0.1))
 
+(defun my/report-startup-time ()
+  "Report completed startup without changing runtime settings."
   ;; gcmh performs the post-startup collection after a real idle period.  A
   ;; separate two-second timer used to race with the first picker or LSP jump.
   (message "Emacs loaded in %.2fs with %d garbage collections"
            (float-time (time-subtract after-init-time before-init-time))
            gcs-done))
 
-(add-hook 'emacs-startup-hook #'my/restore-startup-state)
+;; Restore before command-line files and desktop hooks are processed.  init.el
+;; also calls this from an unwind-protect, including when private config fails.
+(add-hook 'after-init-hook #'my/restore-startup-state -100)
+(add-hook 'emacs-startup-hook #'my/report-startup-time)
 
 (provide 'early-init)
 ;;; early-init.el ends here

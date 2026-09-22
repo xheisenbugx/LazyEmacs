@@ -5,6 +5,14 @@
   (setq user-emacs-directory (file-name-as-directory state)
         package-user-dir (expand-file-name "elpa" root))
   (setenv "LAZYEMACS_USER_DIR" (expand-file-name "user" state))
+  ;; Validation must never download or upgrade the shared package directory.
+  (setenv "LAZYEMACS_OFFLINE" "1")
+  ;; Install cleanup before loading init, so failed startup is isolated too.
+  ;; Suites clear kill-emacs-hook, so use advice for cleanup.
+  (advice-add 'kill-emacs :before
+              (lambda (&rest _)
+                (setq kill-emacs-hook nil)
+                (delete-directory state t)))
   (setq treesit-extra-load-path
         (list (expand-file-name "var/treesit" root)
               (expand-file-name "tree-sitter" root)))
@@ -14,7 +22,4 @@
                (not (featurep 'init-mail))
                (not (keymap-lookup global-map "C-c M")))
     (error "Distribution recovery or opt-in mail contract failed"))
-  ;; Existing suites suppress shutdown state writers.  Clean temporary state
-  ;; via advice because those suites intentionally clear kill-emacs-hook.
-  (advice-add 'kill-emacs :before (lambda (&rest _) (delete-directory state t)))
   (load (expand-file-name suite (expand-file-name "tests" root)) nil t))

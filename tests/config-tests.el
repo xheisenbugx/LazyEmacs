@@ -139,13 +139,16 @@
 		      (should (equal (my/task-nearest-js-test) "group adds numbers"))))
 
 (ert-deftest my/task-pytest-class-selector ()
-  (with-temp-buffer
-    (python-mode)
-    (setq buffer-file-name "/tmp/project/test_api.py")
-    (insert "class TestAPI:\n    def test_ok(self):\n        assert True\n")
-    (search-backward "assert")
-    (should (equal (my/task-test-command "/tmp/project/" t)
-                   (concat "python -m pytest " (shell-quote-argument "test_api.py::TestAPI::test_ok"))))))
+  (let ((root (file-name-as-directory (make-temp-file "lazyemacs-pytest-" t))))
+    (unwind-protect
+        (with-temp-buffer
+          (python-mode)
+          (setq buffer-file-name (expand-file-name "test_api.py" root))
+          (insert "class TestAPI:\n    def test_ok(self):\n        assert True\n")
+          (search-backward "assert")
+          (should (equal (my/task-test-command root t)
+                         (concat "python -m pytest " (shell-quote-argument "test_api.py::TestAPI::test_ok")))))
+      (delete-directory root t))))
 
 (ert-deftest my/session-filter-preserves-projects-not-runtime-objects ()
   (let* ((tabs `(tabs (tab (name . "review") (group . "Project")

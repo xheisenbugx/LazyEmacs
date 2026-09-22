@@ -46,6 +46,17 @@
         ((file-exists-p (expand-file-name "yarn.lock" root)) "yarn")
         (t "npm")))
 
+(defun my/task-python-command (root)
+  "Return a pytest command using ROOT's environment without installing tools."
+  (let ((python (seq-find #'file-executable-p
+                         (mapcar (lambda (path) (expand-file-name path root))
+                                 '(".venv/bin/python" ".venv/Scripts/python.exe")))))
+    (cond (python (concat (shell-quote-argument python) " -m pytest"))
+          ((and (file-exists-p (expand-file-name "uv.lock" root))
+                (executable-find "uv"))
+           "uv run --frozen --no-sync --no-python-downloads python -m pytest")
+          (t "python -m pytest"))))
+
 (defun my/task-choices (root)
   "Discover package scripts and common test/build commands in ROOT."
   (append
@@ -57,7 +68,7 @@
                              (shell-quote-argument name)))))
            (alist-get 'scripts (my/task-package root)))
    (when (file-exists-p (expand-file-name "pyproject.toml" root))
-     '(("test: pytest" . "python -m pytest")))
+     (list (cons "test: pytest" (my/task-python-command root))))
    (when (file-exists-p (expand-file-name "go.mod" root))
      '(("test: Go" . "go test ./...") ("build: Go" . "go build ./...")))
    (when (file-exists-p (expand-file-name "Cargo.toml" root))
@@ -173,10 +184,13 @@
   "Build a focused test command for the current file in ROOT.
 With NEAREST, narrow to the surrounding supported test."
   (unless buffer-file-name (user-error "This buffer has no file"))
+  (unless (file-in-directory-p buffer-file-name root)
+    (user-error "The current file is outside the selected project"))
   (let ((file (file-relative-name buffer-file-name root)))
+    (when (string-prefix-p "-" file) (setq file (concat "./" file)))
     (cond
      ((derived-mode-p 'python-mode 'python-ts-mode)
-      (concat "python -m pytest "
+      (concat (my/task-python-command root) " "
               (shell-quote-argument
                (concat file
                        (when nearest
@@ -185,7 +199,7 @@ With NEAREST, narrow to the surrounding supported test."
                            (unless (and name (string-match-p "\\(?:\\`\\|\\.\\)test_" name))
                              (user-error "Place point inside a pytest test"))
                            (concat "::" (replace-regexp-in-string "\\." "::" name))))))))
-     ((derived-mode-p 'js-mode 'js-ts-mode 'typescript-ts-mode 'tsx-ts-mode)
+     ((derived-mode-p 'js-mode 'js-ts-mode 'typescript-mode 'typescript-ts-mode 'tsx-ts-mode)
       (let* ((runner (my/task-js-runner root))
              (manager (my/task-package-manager root))
              (exec (pcase manager ("npm" "npm exec --no --")
