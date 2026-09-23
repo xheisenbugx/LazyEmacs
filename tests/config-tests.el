@@ -175,11 +175,13 @@
       (should (= count (length (window-list)))))))
 
 (ert-deftest my/session-terminal-restore-does-not-start-a-process ()
-  (let ((buffer (my/session-restore-terminal nil "*test-saved-terminal*" "/tmp/")))
+  ;; Use a directory that exists on every platform; restore ignores missing ones.
+  (let* ((directory (file-name-as-directory temporary-file-directory))
+         (buffer (my/session-restore-terminal nil "*test-saved-terminal*" directory)))
     (unwind-protect
         (with-current-buffer buffer
           (should (eq major-mode 'my/session-terminal-mode))
-          (should (equal default-directory "/tmp/"))
+          (should (equal default-directory directory))
           (should-not (get-buffer-process buffer))
           (should (eq (key-binding (kbd "RET")) #'my/session-terminal-open)))
       (kill-buffer buffer))))

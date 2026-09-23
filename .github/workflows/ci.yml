@@ -10,6 +10,7 @@ jobs:
   offline:
     name: Syntax and startup contracts (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -24,13 +25,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Invoke-WebRequest https://ftpmirror.gnu.org/gnu/emacs/windows/emacs-31/emacs-31.1.zip -OutFile emacs.zip
+          Invoke-WebRequest https://ftp.gnu.org/gnu/emacs/windows/emacs-31/emacs-31.1.zip -OutFile emacs.zip
           Expand-Archive emacs.zip -DestinationPath "$env:RUNNER_TEMP\emacs"
           $emacs = Get-ChildItem "$env:RUNNER_TEMP\emacs" -Recurse -Filter emacs.exe | Select-Object -First 1
           Add-Content $env:GITHUB_PATH $emacs.DirectoryName
-          # Git's MSYS gpg cannot verify ELPA signatures from native Emacs.
-          choco install gnupg -y --no-progress
-          Add-Content $env:GITHUB_PATH "${env:ProgramFiles(x86)}\GnuPG\bin"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
@@ -41,6 +39,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Windows is newer territory: report its results without blocking merges.
     continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -55,13 +54,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Invoke-WebRequest https://ftpmirror.gnu.org/gnu/emacs/windows/emacs-31/emacs-31.1.zip -OutFile emacs.zip
+          Invoke-WebRequest https://ftp.gnu.org/gnu/emacs/windows/emacs-31/emacs-31.1.zip -OutFile emacs.zip
           Expand-Archive emacs.zip -DestinationPath "$env:RUNNER_TEMP\emacs"
           $emacs = Get-ChildItem "$env:RUNNER_TEMP\emacs" -Recurse -Filter emacs.exe | Select-Object -First 1
           Add-Content $env:GITHUB_PATH $emacs.DirectoryName
-          # Git's MSYS gpg cannot verify ELPA signatures from native Emacs.
-          choco install gnupg -y --no-progress
-          Add-Content $env:GITHUB_PATH "${env:ProgramFiles(x86)}\GnuPG\bin"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
@@ -74,7 +70,15 @@ jobs:
           key: ${{ runner.os }}-elpa-${{ hashFiles('lisp/*.el') }}
           restore-keys: ${{ runner.os }}-elpa-
       - name: Install packages and grammars
+        if: runner.os != 'Windows'
         run: emacs --batch --load scripts/bootstrap.el --grammars
+      # Git for Windows' MSYS gpg cannot verify ELPA signatures from native
+      # Emacs, and installing GnuPG on the runner is unreliable.  This
+      # disposable CI install skips verification; users install GnuPG
+      # (see docs/installation.md).
+      - name: Install packages and grammars (Windows)
+        if: runner.os == 'Windows'
+        run: emacs --batch --eval "(setq package-check-signature nil)" --load scripts/bootstrap.el --grammars
       - name: Run every test suite
         run: python scripts/test.py
       - name: Check whitespace

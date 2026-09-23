@@ -121,8 +121,12 @@
           (with-temp-file (expand-file-name "uv.lock" root) (insert "version = 1\n"))
           (cl-letf (((symbol-function 'executable-find) (lambda (_) "/tools/uv")))
             (should (equal (my/task-python-command root) "uv run --frozen --no-sync --no-python-downloads python -m pytest")))
-          (make-directory (expand-file-name ".venv/bin" root) t)
-          (let ((python (expand-file-name ".venv/bin/python" root)))
+          ;; Virtualenvs use Scripts\python.exe on Windows and bin/python elsewhere.
+          (let ((python (expand-file-name (if (eq system-type 'windows-nt)
+                                              ".venv/Scripts/python.exe"
+                                            ".venv/bin/python")
+                                          root)))
+            (make-directory (file-name-directory python) t)
             (with-temp-file python (insert "#!/bin/sh\n"))
             (set-file-modes python #o700)
             (should (equal (my/task-python-command root)

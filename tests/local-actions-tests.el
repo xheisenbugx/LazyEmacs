@@ -47,7 +47,11 @@
           (my/local-actions-finish)
           (should (eq major-mode 'dired-mode)))
       (kill-buffer buffer)
-      (delete-directory directory t))))
+      ;; Windows keeps a directory locked while a file-notify watch on it is
+      ;; open.  Release watches first; a leftover empty temp directory is
+      ;; harmless, so cleanup must not fail the test.
+      (when (fboundp 'file-notify-rm-all-watches) (file-notify-rm-all-watches))
+      (ignore-error permission-denied (delete-directory directory t)))))
 
 (ert-deftest my/local-actions-does-not-claim-other-buffers ()
   (with-temp-buffer
