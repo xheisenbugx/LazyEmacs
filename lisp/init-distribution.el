@@ -72,6 +72,11 @@ No grammars are downloaded automatically.  Restart after changing this option."
     (when (file-exists-p file)
       (load file nil 'nomessage))))
 
+(defvar lazyemacs-doctor-sections nil
+  "Functions that print additional sections of `lazyemacs-doctor'.
+Each is called with `standard-output' directed at the report and must not
+launch processes or install anything.  Add them with `add-hook'.")
+
 (defun lazyemacs-doctor ()
   "Display a read-only environment report; never install or run external tools."
   (interactive)
@@ -130,7 +135,8 @@ No grammars are downloaded automatically.  Restart after changing this option."
         (dolist (entry (sort (copy-sequence package-alist)
                             (lambda (a b) (string< (symbol-name (car a)) (symbol-name (car b))))))
           (princ (format "%-30s %s\n" (car entry)
-                         (package-version-join (package-desc-version (cadr entry))))))))))
+                         (package-version-join (package-desc-version (cadr entry)))))))
+      (run-hooks 'lazyemacs-doctor-sections))))
 
 (make-directory lazyemacs-user-directory t)
 (provide 'init-distribution)
