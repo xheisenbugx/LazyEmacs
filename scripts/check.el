@@ -5,7 +5,7 @@
   (setenv "LAZYEMACS_USER_DIR" (expand-file-name "user" state))
   (setenv "LAZYEMACS_OFFLINE" "1")
   (add-hook 'kill-emacs-hook (lambda () (delete-directory state t)))
-  (dolist (directory '("." "lisp" "examples" "tests" "scripts"))
+  (dolist (directory '("." "lisp" "lisp/extras" "examples" "tests" "scripts"))
     (dolist (file (directory-files (expand-file-name directory root) t "\\.el\\'"))
       (with-temp-buffer
         (insert-file-contents file)
