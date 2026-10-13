@@ -11,6 +11,10 @@
 (require 'evil)
 (require 'general)
 
+(declare-function grep-change-to-grep-edit-mode "grep" ())
+(declare-function grep-edit-save-changes "grep" ())
+(declare-function wdired-finish-edit "wdired" ())
+
 (defun my/results-show ()
   "Show the result buffer used by next-error and previous-error."
   (interactive)

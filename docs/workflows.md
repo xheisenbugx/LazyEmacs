@@ -116,10 +116,12 @@ Emacs builds without dynamic-module support open Eshell instead.
 
 - <kbd>C-/</kbd> shows or hides this tab's project terminal at the bottom. The
   shell keeps running while hidden.
-- <kbd>SPC f t</kbd> starts a new, independent shell at the project root.
+- <kbd>SPC f t</kbd> does the same as <kbd>C-/</kbd>; <kbd>4 SPC f t</kbd>
+  starts a new shell at the project root.
 - <kbd>SPC f T</kbd> shows the terminal for the current directory;
   <kbd>4 SPC f T</kbd> forces a new one.
-- <kbd>C-h/j/k/l</kbd> leave the terminal for the neighbouring window.
+- <kbd>Esc</kbd> then <kbd>C-h/j/k/l</kbd> leaves the terminal for the
+  neighbouring window.
   <kbd>C-q</kbd> sends the next key straight to the shell when a program needs
   a key that Emacs would otherwise handle.
 

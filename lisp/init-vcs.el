@@ -7,6 +7,13 @@
 
 ;;; Code:
 
+(declare-function magit-diff-range "magit-diff" (rev-or-range &optional args files))
+(declare-function magit-get-current-branch "magit-git" ())
+(declare-function magit-get-upstream-branch "magit-git" (&optional branch))
+(declare-function magit-log-arguments "magit-log" (&optional mode))
+(declare-function magit-log-setup-buffer "magit-log" (revs args files &optional locked focus))
+(declare-function magit-toplevel "magit-git" (&optional directory))
+
 (use-package magit
   :commands
   (magit-status magit-blame-addition magit-log-current

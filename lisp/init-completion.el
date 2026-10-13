@@ -135,7 +135,7 @@
   ;; autoload that deleted function from embark-consult.  Remove the stale hook
   ;; when reloading the config; current embark-consult installs its replacement,
   ;; `consult--default-completion-list-preview-setup', automatically.
-  (remove-hook 'embark-collect-mode-hook #'consult-preview-at-point-mode))
+  (remove-hook 'embark-collect-mode-hook 'consult-preview-at-point-mode))
 
 (defun my/find-file-cwd ()
   "Pick a file under the current directory, without switching to project root."
@@ -146,8 +146,15 @@
 (defun my/recent-files-cwd ()
   "Pick a recent file under the current directory."
   (interactive)
-  (let* ((directory default-directory)
-         (recentf-list (seq-filter (lambda (file) (file-in-directory-p file directory))
+  (let* ((directory (expand-file-name default-directory))
+         (host (file-remote-p directory))
+         ;; Compare names, not files: `file-in-directory-p' would resolve
+         ;; every remote entry through TRAMP.  Only same-host entries count.
+         (recentf-list (seq-filter (lambda (file)
+                                     (and (equal (file-remote-p file) host)
+                                          (if host
+                                              (string-prefix-p directory (expand-file-name file))
+                                            (file-in-directory-p file directory))))
                                    recentf-list)))
     (consult-recent-file)))
 
@@ -249,9 +256,18 @@ Edits update source buffers; finish with backslash c and save files explicitly."
         ([tab] . corfu-next)
         ("S-TAB" . corfu-previous)
         ([backtab] . corfu-previous)
-        ("RET" . corfu-insert)
         ("M-d" . corfu-popupinfo-documentation)
-        ("M-l" . corfu-popupinfo-location)))
+        ("M-l" . corfu-popupinfo-location))
+  :config
+  ;; With `corfu-preselect' set to `prompt', nothing is selected until TAB
+  ;; moves into the list.  RET then inserts the selected candidate; with no
+  ;; selection the binding disappears, so RET falls through to the buffer's
+  ;; own newline command instead of only closing the popup.
+  (keymap-set corfu-map "RET" `(menu-item "" nil :filter ,#'my/corfu-insert-if-selected)))
+
+(defun my/corfu-insert-if-selected (&rest _)
+  "Return `corfu-insert' when a Corfu candidate is selected, else nil."
+  (and (>= corfu--index 0) #'corfu-insert))
 
 (defun my/add-cape-completion-functions ()
   "Append useful fallback completion sources in the current buffer.

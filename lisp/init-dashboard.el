@@ -33,7 +33,8 @@
     ("c" "Config" my/open-init-file)
     ("s" "Restore session" my/session-restore)
     ("l" "Packages" list-packages)
-    ("q" "Quit" save-buffers-kill-emacs))
+    ;; Closes only an emacsclient frame; quits a standalone Emacs.
+    ("q" "Quit" save-buffers-kill-terminal))
   "Dashboard actions as (KEY LABEL COMMAND), matching LazyVim's start screen.")
 
 (defvar lazyemacs-dashboard-buffer-name "*lazyemacs*")
@@ -85,6 +86,9 @@
   (insert-text-button label 'action (lambda (_) (funcall action)) 'follow-link t)
   (insert "\n"))
 
+(defvar-local lazyemacs-dashboard--width nil
+  "Window width the dashboard was last drawn for.")
+
 (defun lazyemacs-dashboard--render ()
   "Draw the dashboard for the selected window's width."
   (let* ((inhibit-read-only t)
@@ -93,6 +97,7 @@
          (logo-width (apply #'max (mapcar #'string-width lazyemacs-dashboard-logo)))
          (column-width 44)
          (indent (max 0 (/ (- width column-width) 2))))
+    (setq lazyemacs-dashboard--width width)
     (erase-buffer)
     (insert "\n\n")
     (if (> width (+ logo-width 4))
@@ -103,6 +108,13 @@
       (lazyemacs-dashboard--insert-centered "L A Z Y E M A C S" width 'lazyemacs-dashboard-logo))
     (insert "\n")
     (lazyemacs-dashboard--insert-centered "Evil Emacs, the LazyVim way" width 'shadow)
+    (when lazyemacs-failed-modules
+      (insert "\n")
+      (lazyemacs-dashboard--insert-centered
+       (format "Failed to load: %s  (SPC h D for details)"
+               (mapconcat (lambda (entry) (symbol-name (car entry)))
+                          (reverse lazyemacs-failed-modules) ", "))
+       width 'error))
     (insert "\n\n")
     (pcase-dolist (`(,key ,label ,command) lazyemacs-dashboard-actions)
       (insert (make-string indent ?\s))
@@ -110,7 +122,10 @@
       (insert-text-button label 'action (lambda (_) (call-interactively command))
                           'follow-link t 'face 'default)
       (insert "\n"))
-    (when-let* ((files (seq-take (seq-filter #'file-exists-p
+    ;; Remote entries are listed without checking them: probing /ssh: or
+    ;; /docker: names would open a TRAMP connection while drawing.
+    (when-let* ((files (seq-take (seq-filter (lambda (file)
+                                               (or (file-remote-p file) (file-exists-p file)))
                                              (bound-and-true-p recentf-list))
                                  5)))
       (insert "\n" (make-string indent ?\s)
@@ -140,10 +155,17 @@
       (goto-char (match-end 0)))))
 
 (defun lazyemacs-dashboard--resize (window)
-  "Re-center the dashboard shown in WINDOW after its size changes."
+  "Re-center the dashboard shown in WINDOW after its width changes.
+Height changes (a Which Key popup, the echo area) do not redraw, and a
+redraw keeps point on the same line."
   (with-current-buffer (window-buffer window)
-    (when (derived-mode-p 'lazyemacs-dashboard-mode)
-      (lazyemacs-dashboard--render))))
+    (when (and (derived-mode-p 'lazyemacs-dashboard-mode)
+               (not (eql (window-width window) lazyemacs-dashboard--width)))
+      (let ((line (line-number-at-pos (window-point window))))
+        (lazyemacs-dashboard--render)
+        (goto-char (point-min))
+        (forward-line (1- line))
+        (set-window-point window (point))))))
 
 (defun lazyemacs-dashboard-buffer ()
   "Return the dashboard buffer, freshly rendered."

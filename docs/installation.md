@@ -157,6 +157,10 @@ Markdown, Terraform, GraphQL, `.env`, `.http` (restclient), and Org have
 editing modes without an automatic server. Any other language supported by
 lsp-mode starts with `M-x my/lsp-start`.
 
+Without a server, Emacs Lisp files are checked by the byte compiler, and shell
+scripts by `shellcheck` when it is installed. When a formatter is missing,
+<kbd>SPC c f</kbd> formats with the language server instead, or reindents.
+
 ## Daemon and client
 
 ```sh
