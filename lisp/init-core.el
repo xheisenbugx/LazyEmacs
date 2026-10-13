@@ -22,6 +22,13 @@
       use-dialog-box nil
       use-file-dialog nil)
 
+;; Emacs 31 warns about third-party files without a lexical-binding cookie
+;; (for example yasnippet-snippets).  Users can't fix those files, and the
+;; *Warnings* popup at startup lands in a side window over the restored
+;; layout.  Suppressing the type keeps it in the *Warnings* log, unshown.
+(require 'warnings)
+(add-to-list 'warning-suppress-types '(files missing-lexbind-cookie))
+
 ;; Prefer UTF-8 at every boundary unless a file explicitly declares otherwise.
 (set-language-environment "UTF-8")
 (prefer-coding-system 'utf-8-unix)

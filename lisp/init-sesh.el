@@ -114,6 +114,13 @@ Starting Emacs with --no-desktop skips the restore once."
 (defvar lazyemacs-sesh--inhibit-save nil
   "Non-nil after `lazyemacs-sesh-stop-saving' for the rest of this Emacs.")
 
+(defvar lazyemacs-sesh--unsaveable nil
+  "Sessions being restored or whose restore failed; they are never saved.
+Saving them would replace a good file with a partial layout.")
+
+(defvar lazyemacs-sesh--failed nil
+  "Sessions that failed to restore at startup, kept for the next startup.")
+
 (defvar lazyemacs-sesh--written (make-hash-table :test #'equal)
   "Last text written per session, to skip identical writes.")
 
@@ -136,8 +143,10 @@ Desktop removes the flag during `after-init-hook', so read it at load time.")
   (and (stringp name) (project-tab-sessions--tabs name) t))
 
 (defun lazyemacs-sesh--live-names ()
-  "Return live session names, current first and then most recent."
-  (delq nil (my/session-names)))
+  "Return live session names, current first and then most recent.
+Groups whose names start with a space are internal placeholders."
+  (seq-remove (lambda (name) (or (null name) (string-prefix-p " " name)))
+              (my/session-names)))
 
 (defun lazyemacs-sesh--live-root (name)
   "Return the project root of live session NAME."
@@ -253,6 +262,68 @@ Window histories are dropped: they name buffers that are not restored."
         (t (cons (lazyemacs-sesh--map-state (car state) function)
                  (lazyemacs-sesh--map-state (cdr state) function)))))
 
+(defun lazyemacs-sesh--window-node-p (node)
+  "Return non-nil when NODE is a window in a window state tree."
+  (and (consp node) (memq (car node) '(leaf hc vc))))
+
+(defun lazyemacs-sesh--transient-node-p (node)
+  "Return non-nil for side windows and popup leaves in window state NODE.
+They belong to the moment (warnings, help, compilation), not the layout."
+  (let ((attributes (cdr node)))
+    (or (alist-get 'window-side (cdr (assq 'parameters attributes)))
+        (when-let* (((eq (car node) 'leaf))
+                    (name (cadr (assq 'buffer attributes)))
+                    (buffer (and (stringp name) (get-buffer name))))
+          (and (not (lazyemacs-sesh--buffer-spec buffer))
+               (or (string-match-p "\\`\\*\\(Warnings\\|Messages\\|Backtrace\\|Compile-Log\\)\\*" name)
+                   (and (fboundp 'popper-popup-p) (popper-popup-p buffer))))))))
+
+(defun lazyemacs-sesh--strip-node (node)
+  "Return window state NODE without transient windows, or nil if none remain."
+  (cond
+   ((lazyemacs-sesh--transient-node-p node) nil)
+   ((eq (car node) 'leaf) node)
+   (t (let ((kept (delq nil (mapcar #'lazyemacs-sesh--strip-node
+                                    (seq-filter #'lazyemacs-sesh--window-node-p (cdr node))))))
+        (cond ((null kept) nil)
+              ((null (cdr kept)) (car kept))
+              (t (cons (car node)
+                       (append (seq-remove #'lazyemacs-sesh--window-node-p (cdr node)) kept))))))))
+
+(defun lazyemacs-sesh--restorable-name-p (name)
+  "Return non-nil when buffer NAME is live and can be recreated."
+  (when-let* ((buffer (and (stringp name) (get-buffer name))))
+    (lazyemacs-sesh--buffer-spec buffer)))
+
+(defun lazyemacs-sesh--prefer-restorable (node)
+  "Show the most recent restorable buffer in windows of NODE that lack one.
+A window showing Magit or help after a file comes back with that file
+instead of *scratch*; the window's own history says which one."
+  (cond
+   ((not (lazyemacs-sesh--window-node-p node)) node)
+   ((eq (car node) 'leaf)
+    (let* ((attributes (cdr node))
+           (buffer (assq 'buffer attributes))
+           (previous (seq-find (lambda (entry) (lazyemacs-sesh--restorable-name-p (car-safe entry)))
+                               (cdr (assq 'prev-buffers attributes)))))
+      (if (or (not buffer) (lazyemacs-sesh--restorable-name-p (cadr buffer)) (not previous))
+          node
+        (let ((props (copy-alist (cddr buffer))))
+          (setf (alist-get 'start props) (nth 1 previous)
+                (alist-get 'point props) (nth 2 previous))
+          (cons 'leaf (mapcar (lambda (item)
+                                (if (eq item buffer) `(buffer ,(car previous) ,@props) item))
+                              attributes))))))
+   (t (cons (car node) (mapcar #'lazyemacs-sesh--prefer-restorable (cdr node))))))
+
+(defun lazyemacs-sesh--strip-state (state)
+  "Remove side windows and popups from window STATE.
+A state is (SIZES . ROOT-NODE); nil means nothing worth keeping."
+  (when (and (consp state) (lazyemacs-sesh--window-node-p (cdr state)))
+    (when-let* ((root (lazyemacs-sesh--strip-node
+                       (lazyemacs-sesh--prefer-restorable (cdr state)))))
+      (cons (car state) root))))
+
 (defun lazyemacs-sesh--terminal-p (buffer)
   "Return non-nil when BUFFER is a terminal or a saved terminal placeholder."
   (with-current-buffer buffer
@@ -298,7 +369,7 @@ Window histories are dropped: they name buffers that are not restored."
         (lambda (tab)
           (let* ((buffers nil)
                  (state (lazyemacs-sesh--map-state
-                         (lazyemacs-sesh--tab-state tab frame)
+                         (lazyemacs-sesh--strip-state (lazyemacs-sesh--tab-state tab frame))
                          (lambda (buffer-name)
                            (when-let* ((buffer (get-buffer buffer-name))
                                        (spec (lazyemacs-sesh--buffer-spec buffer)))
@@ -316,13 +387,24 @@ Window histories are dropped: they name buffers that are not restored."
       (seq-some (lambda (tab) (or (plist-get tab :buffers) (plist-get tab :explicit)))
                 (plist-get data :tabs))))
 
-(defun lazyemacs-sesh--save (name &optional quiet)
+(defun lazyemacs-sesh--has-buffers-p (data)
+  "Return non-nil when saved DATA has a restorable buffer in some layout."
+  (seq-some (lambda (tab) (plist-get tab :buffers)) (plist-get data :tabs)))
+
+(defun lazyemacs-sesh--save (name &optional quiet force)
   "Save live session NAME to its file.  Return non-nil when saved.
-With QUIET, skip sessions owned by another Emacs instead of signaling."
+With QUIET, skip sessions owned by another Emacs instead of signaling.
+Unless FORCE (an explicit save), never save a session that is restoring
+or failed to restore, and never replace a file that has buffers with a
+layout that has none."
   (when-let* (((not lazyemacs-sesh--inhibit-save))
+              ((or force (not (member name lazyemacs-sesh--unsaveable))))
               (data (lazyemacs-sesh--serialize name))
               ((lazyemacs-sesh--worth-saving-p data)))
-    (if (and quiet (lazyemacs-sesh--lock-owner name))
+    (if (or (and quiet (lazyemacs-sesh--lock-owner name))
+            (and (not force)
+                 (not (lazyemacs-sesh--has-buffers-p data))
+                 (lazyemacs-sesh--has-buffers-p (lazyemacs-sesh--saved-data name))))
         nil
       (lazyemacs-sesh--lock name)
       (let ((text (prin1-to-string (plist-put (copy-sequence data) :last-used nil)))
@@ -346,7 +428,8 @@ With QUIET, skip sessions owned by another Emacs instead of signaling."
   (interactive (list (lazyemacs-sesh--read "Save session: " t)))
   (unless (lazyemacs-sesh--live-p name) (user-error "No live session named %s" name))
   (let ((lazyemacs-sesh--inhibit-save nil))
-    (if (lazyemacs-sesh--save name)
+    (setq lazyemacs-sesh--unsaveable (delete name lazyemacs-sesh--unsaveable))
+    (if (lazyemacs-sesh--save name nil t)
         (message "Saved session %s" name)
       (message "Session %s has nothing to save" name))))
 
@@ -355,7 +438,9 @@ With QUIET, skip sessions owned by another Emacs instead of signaling."
   (unless lazyemacs-sesh--inhibit-save
     (lazyemacs-sesh--write-file
      lazyemacs-sesh-state-file
-     (list :sessions (seq-filter #'lazyemacs-sesh--saved-data (lazyemacs-sesh--live-names))
+     (list :sessions (seq-filter #'lazyemacs-sesh--saved-data
+                                 (delete-dups (append (lazyemacs-sesh--live-names)
+                                                      lazyemacs-sesh--failed)))
            :current (lazyemacs-sesh--current)
            :previous lazyemacs-sesh--previous))))
 
@@ -395,6 +480,17 @@ Saved files are kept; quitting will not overwrite them.  `SPC q S' resumes."
        (if (and live (lazyemacs-sesh--terminal-p live)) live
          (my/session-restore-terminal nil name directory))))))
 
+(defun lazyemacs-sesh--reset-windows ()
+  "Leave the selected tab with one ordinary window, selected.
+Side windows (popups such as *Warnings*) cannot be the only window, so
+`delete-other-windows' and `window-state-put' fail while one is selected."
+  (dolist (window (window-list nil 'nomini))
+    (when (and (window-live-p window) (window-parameter window 'window-side))
+      (ignore-errors (delete-window window))))
+  (when (window-parameter (selected-window) 'window-side)
+    (select-window (window-main-window)))
+  (delete-other-windows))
+
 (defun lazyemacs-sesh--put-state (state buffers)
   "Show window STATE in the selected tab, recreating BUFFERS specs.
 Missing files and directories are skipped; their windows show *scratch*."
@@ -406,12 +502,12 @@ Missing files and directories are skipped; their windows show *scratch*."
                           (buffer (if spec (lazyemacs-sesh--restore-buffer spec name)
                                     (get-buffer name))))
                      (buffer-name (or buffer fallback)))))))
-    (delete-other-windows)
+    (lazyemacs-sesh--reset-windows)
     (when state
       (condition-case err
           (window-state-put state (selected-window) 'safe)
         (error (message "Could not restore a layout: %s" (error-message-string err))
-               (delete-other-windows)
+               (lazyemacs-sesh--reset-windows)
                (switch-to-buffer fallback))))
     ;; Nothing survived: show the start screen instead of empty windows.
     (when (seq-every-p (lambda (window) (eq (window-buffer window) fallback))
@@ -432,15 +528,35 @@ Missing files and directories are skipped; their windows show *scratch*."
 (defun lazyemacs-sesh--restore (data)
   "Make the saved session DATA live and select its last active layout."
   (let ((name (plist-get data :name))
-        (root (plist-get data :root)))
+        (root (plist-get data :root))
+        (done nil))
     (lazyemacs-sesh--lock name)
-    (dolist (tab (or (plist-get data :tabs) '((:name nil))))
-      (lazyemacs-sesh--new-tab name (and root (file-directory-p root) root))
-      (when (plist-get tab :explicit) (tab-bar-rename-tab (plist-get tab :name)))
-      (lazyemacs-sesh--put-state (plist-get tab :state) (plist-get tab :buffers))
-      (lazyemacs-sesh--track-windows (selected-frame)))
-    (let ((count (length (project-tab-sessions--tabs name))))
-      (project-tab-sessions-select-tab (1+ (min (1- count) (or (plist-get data :current) 0)))))
+    (push name lazyemacs-sesh--unsaveable)
+    (unwind-protect
+        (progn
+          (dolist (tab (or (plist-get data :tabs) '((:name nil))))
+            (lazyemacs-sesh--new-tab name (and root (file-directory-p root) root))
+            (when (plist-get tab :explicit) (tab-bar-rename-tab (plist-get tab :name)))
+            (lazyemacs-sesh--put-state (plist-get tab :state) (plist-get tab :buffers))
+            (lazyemacs-sesh--track-windows (selected-frame)))
+          (let ((count (length (project-tab-sessions--tabs name))))
+            (project-tab-sessions-select-tab (1+ (min (1- count) (or (plist-get data :current) 0)))))
+          (setq done t))
+      (if done
+          (setq lazyemacs-sesh--unsaveable (delete name lazyemacs-sesh--unsaveable))
+        ;; Drop the partial layout so nothing can save it over the good file.
+        (when (lazyemacs-sesh--live-p name)
+          (let* ((lazyemacs-sesh--inhibit-save t)
+                 (tabs (funcall tab-bar-tabs-function))
+                 ;; Any other tab, including the startup placeholder, will do.
+                 (other (seq-position tabs name (lambda (tab group)
+                                                  (not (equal group (alist-get 'group tab)))))))
+            (ignore-errors
+              (if (not other)
+                  (lazyemacs-sesh--close name)
+                (tab-bar-select-tab (1+ other))
+                (tab-bar-close-group-tabs name)))))
+        (ignore-errors (lazyemacs-sesh--unlock name))))
     (puthash name (prin1-to-string (plist-put (copy-sequence data) :last-used nil))
              lazyemacs-sesh--written)
     name))
@@ -920,7 +1036,7 @@ Commands run only when ALLOWED; otherwise terminals become placeholders."
          (terminal (plist-get layout :terminal))
          (command (plist-get layout :command))
          (shown nil))
-    (delete-other-windows)
+    (lazyemacs-sesh--reset-windows)
     (when (and file (file-readable-p (expand-file-name file root)))
       (find-file (expand-file-name file root))
       (setq shown t))
@@ -1144,19 +1260,25 @@ With STARTUP, replace the pristine startup layout instead of keeping it."
       ;; At startup the default session is an empty tab: let a saved version
       ;; of it restore in place instead of selecting the empty one.
       (when pristine (tab-bar-change-tab-group " lazyemacs-sesh-startup"))
-      (dolist (name names)
-        (unless (lazyemacs-sesh--live-p name)
-          (condition-case err
-              (progn (lazyemacs-sesh--restore (lazyemacs-sesh--saved-data name))
-                     (push name restored))
-            (user-error (message "%s" (error-message-string err))))))
-      (when pristine
-        (let ((others (remove " lazyemacs-sesh-startup" (lazyemacs-sesh--live-names))))
-          (if (not others)
-              (tab-bar-change-tab-group pristine)
-            (when (equal (lazyemacs-sesh--current) " lazyemacs-sesh-startup")
-              (project-tab-sessions-switch (car others)))
-            (tab-bar-close-group-tabs " lazyemacs-sesh-startup"))))
+      (unwind-protect
+          (dolist (name names)
+            (unless (lazyemacs-sesh--live-p name)
+              ;; One broken session must not keep the others from reopening.
+              (condition-case err
+                  (progn (lazyemacs-sesh--restore (lazyemacs-sesh--saved-data name))
+                         (setq lazyemacs-sesh--failed (delete name lazyemacs-sesh--failed))
+                         (push name restored))
+                (error
+                 (unless (member name lazyemacs-sesh--failed)
+                   (setq lazyemacs-sesh--failed (append lazyemacs-sesh--failed (list name))))
+                 (message "Could not restore session %s: %s" name (error-message-string err))))))
+        (when pristine
+          (let ((others (lazyemacs-sesh--live-names)))
+            (if (not others)
+                (tab-bar-change-tab-group pristine)
+              (when (equal (lazyemacs-sesh--current) " lazyemacs-sesh-startup")
+                (project-tab-sessions-switch (car others)))
+              (tab-bar-close-group-tabs " lazyemacs-sesh-startup")))))
       (when (lazyemacs-sesh--live-p current)
         (project-tab-sessions-switch current))
       (setq lazyemacs-sesh--previous
