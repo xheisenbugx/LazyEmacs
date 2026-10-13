@@ -449,6 +449,17 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 (defvar my/leader-workspace-map (symbol-function 'my/leader-workspace-prefix))
 (defvar my/leader-snippet-map (symbol-function 'my/leader-snippet-prefix))
 
+;; LazyVim's `SPC l' opens the Lazy UI, whose own keys update, restore, and
+;; browse extras.  Here they are a leader group; `SPC l l' is the package list.
+(lazyemacs-define-leader-map
+ 'my/leader-package-prefix
+ '(("l" "Packages" list-packages)
+   ("u" "Update packages" lazyemacs-update-packages)
+   ("r" "Restore lockfile" lazyemacs-lock-restore)
+   ("s" "Lockfile status" lazyemacs-lock-status)
+   ("x" "Extras" lazyemacs-extras)))
+(defvar my/leader-package-map (symbol-function 'my/leader-package-prefix))
+
 ;; (KEY DESCRIPTION MAP C-c-ALIAS).  Groups with a nil alias are SPC-only.
 (defconst lazyemacs-leader-groups
   `(("b" "Buffers" ,my/leader-buffer-map "b")
@@ -458,6 +469,7 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
     ("g" "Git" ,my/leader-git-map "g")
     ("h" "Help" ,my/leader-help-map "h")
     ("j" "Jump" ,my/leader-jump-map "j")
+    ("l" "Packages" ,my/leader-package-map "l")
     ("m" "Multiple cursors" ,my/leader-multiple-cursors-map "m")
     ,@(when lazyemacs-enable-mail
         `(("M" "Mail" ,my/leader-mail-map "M")))
@@ -487,7 +499,6 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
     ("?" "Buffer keymaps" which-key-show-full-major-mode)
     ("e" "Explorer (root)" my/project-explorer)
     ("E" "Explorer (cwd)" dirvish-side)
-    ("l" "Packages" list-packages)
     ("L" "LazyEmacs changelog" my/open-changelog)
     ("n" "Notification history" my/messages))
   "Single-key leader commands.")

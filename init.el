@@ -52,6 +52,13 @@
 
       (when lazyemacs-enable-mail
         (require 'init-mail))
+      ;; Package lockfile, doctor sections, and opt-in extras (lisp/extras/).
+      ;; Extras load after every module so they can adjust any of them, and
+      ;; before config.el so private configuration still has the last word.
+      (require 'init-lock)
+      (require 'init-doctor)
+      (require 'init-extras)
+      (lazyemacs-load-extras)
       (lazyemacs-load-user-file "config.el"))
   (when (fboundp 'my/restore-startup-state)
     (my/restore-startup-state)))

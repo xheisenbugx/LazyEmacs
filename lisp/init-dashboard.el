@@ -33,6 +33,7 @@
     ("c" "Config" my/open-init-file)
     ("s" "Restore session" my/session-restore)
     ("l" "Packages" list-packages)
+    ("x" "Lazy Extras" lazyemacs-extras)
     ("q" "Quit" save-buffers-kill-emacs))
   "Dashboard actions as (KEY LABEL COMMAND), matching LazyVim's start screen.")
 

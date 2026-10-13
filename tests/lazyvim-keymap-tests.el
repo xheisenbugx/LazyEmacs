@@ -177,7 +177,7 @@
   '(("SPC SPC" . project-find-file) ("SPC ," . consult-project-buffer)
     ("SPC /" . consult-ripgrep) ("SPC :" . my/command-history)
     ("SPC e" . my/project-explorer) ("SPC E" . dirvish-side)
-    ("SPC l" . list-packages) ("SPC n" . my/messages)
+    ("SPC l l" . list-packages) ("SPC n" . my/messages)
     ("SPC b d" . kill-current-buffer) ("SPC b o" . my/kill-other-file-buffers)
     ("SPC c a" . my/lsp-code-actions) ("SPC c A" . my/lsp-source-actions)
     ("SPC c m" . my/lsp-install-server) ("SPC c f" . my/format-buffer)
