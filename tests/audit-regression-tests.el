@@ -142,6 +142,32 @@
           (setq buffer-file-name nil))
       (delete-directory root t))))
 
+;;; Editing
+
+(ert-deftest my/audit-w-treats-camel-case-as-one-word ()
+  (should-not (bound-and-true-p global-subword-mode))
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (insert "fooBarBaz next")
+      (goto-char (point-min))
+      (evil-local-mode 1)
+      (evil-normal-state)
+      (execute-kbd-macro "w")
+      (should (looking-at "next")))))
+
+(ert-deftest my/audit-clipboard-is-chosen-per-frame ()
+  (let (copied native)
+    (cl-letf (((symbol-function 'my/clipboard-copy) (lambda (text) (setq copied text)))
+              ((symbol-function 'my/clipboard-command) (lambda (_) '(pbcopy "pbcopy")))
+              (my/clipboard-default-cut-function (lambda (text) (setq native text))))
+      (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) nil)))
+        (my/clipboard-cut "terminal"))
+      (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) t)))
+        (my/clipboard-cut "graphical"))
+      (should (equal copied "terminal"))
+      (should (equal native "graphical")))))
+
 ;;; Completion
 
 (ert-deftest my/audit-corfu-return-inserts-only-a-selected-candidate ()
