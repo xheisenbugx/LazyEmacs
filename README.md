@@ -56,6 +56,15 @@ running on the most extensible editor ever made.
 - **Plain, readable Emacs Lisp.** No framework and no macros to learn: small
   `use-package` modules you can read in an afternoon, built on Emacs's own
   package manager.
+- **Sessions, the sesh way.** Press <kbd>s-p</kbd> (or <kbd>SPC p p</kbd>) to
+  jump to any project, saved session, zoxide directory or Git worktree. Each
+  session keeps its own tabs and layouts, is saved to its own file, and comes
+  back where you left it when you connect. Declare favourites in
+  `user/config.el`, and connect from the terminal with `bin/lazyemacs-connect`.
+- **Reproducible and modular, the lazy.nvim way.** A committed
+  `lazyemacs-lock.eld` pins every package (<kbd>SPC l u</kbd> update,
+  <kbd>SPC l r</kbd> restore), and `M-x lazyemacs-extras` turns on optional
+  features such as format-on-save, zen mode, or C/C++ support.
 - **Your config stays yours.** Personal settings live in `user/`, ignored by Git,
   so `git pull` updates the distribution without conflicts.
 - **Responsive by design.** Features load when first used, grammars are probed
@@ -96,7 +105,7 @@ default configuration, and a headless installer are in the
 | <kbd>C-/</kbd> | Terminal | | <kbd>SPC t r</kbd> | Run nearest test |
 | <kbd>s</kbd> | Flash jump | | <kbd>gsa</kbd> / <kbd>gsd</kbd> | Add / delete surrounding |
 | <kbd>H</kbd> / <kbd>L</kbd> | Previous / next buffer | | <kbd>C-h/j/k/l</kbd> | Move between windows |
-| <kbd>SPC q s</kbd> | Restore session | | <kbd>SPC u C</kbd> | Pick a colorscheme |
+| <kbd>s-p</kbd> / <kbd>SPC p p</kbd> | Sessions and projects | | <kbd>SPC u C</kbd> | Pick a colorscheme |
 
 Every leader group also works as <kbd>C-c</kbd> plus the same letter, so the
 whole menu is reachable from Insert state. The complete, auto-generated list is
@@ -106,7 +115,7 @@ in **[docs/keymaps.md](docs/keymaps.md)**.
 
 | LazyVim | LazyEmacs | |
 |---|---|---|
-| lazy.nvim | package.el + use-package | built in |
+| lazy.nvim | package.el + use-package + `lazyemacs-lock.eld` | built in |
 | which-key.nvim | Which Key | built in |
 | snacks.picker / telescope | [Vertico](https://github.com/minad/vertico), [Consult](https://github.com/minad/consult), [Orderless](https://github.com/oantolin/orderless), [Embark](https://github.com/oantolin/embark) | |
 | blink.cmp | [Corfu](https://github.com/minad/corfu) + [Cape](https://github.com/minad/cape) | |
@@ -127,7 +136,7 @@ in **[docs/keymaps.md](docs/keymaps.md)**.
 | snacks.explorer / neo-tree | [Dirvish](https://github.com/alexluigit/dirvish) | |
 | snacks.terminal | [Ghostel](https://github.com/dakra/ghostel) (libghostty) | |
 | snacks.dashboard | LazyEmacs dashboard | built in |
-| persistence.nvim | Desktop + [project-tab-sessions](https://github.com/xheisenbugx/project-tab-sessions) | |
+| persistence.nvim + sesh | Per-session files + [project-tab-sessions](https://github.com/xheisenbugx/project-tab-sessions) | built in |
 | lualine | [doom-modeline](https://github.com/seagle0128/doom-modeline) | |
 | tokyonight | [Catppuccin](https://github.com/catppuccin/emacs) / Modus | |
 | — | [Org mode](https://orgmode.org/), TRAMP, [Helpful](https://github.com/Wilfred/helpful), multiple cursors, snippets, project tasks | Emacs extras |

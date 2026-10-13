@@ -293,7 +293,7 @@ appears only when `lazyemacs-enable-mail` is set.
 | <kbd>SPC p d</kbd> | Dired |
 | <kbd>SPC p f</kbd> | Find file |
 | <kbd>SPC p k</kbd> | Kill buffers |
-| <kbd>SPC p p</kbd> | Switch project |
+| <kbd>SPC p p</kbd> | Projects and sessions |
 | <kbd>SPC p s</kbd> | Search |
 
 ### <kbd>SPC q</kbd> Quit/Session (also <kbd>C-c q</kbd>)
@@ -302,6 +302,7 @@ appears only when `lazyemacs-enable-mail` is set.
 |---|---|
 | <kbd>SPC q d</kbd> | Don't save current session |
 | <kbd>SPC q f</kbd> | Private config |
+| <kbd>SPC q i</kbd> | Import old desktop |
 | <kbd>SPC q l</kbd> | Restore last session |
 | <kbd>SPC q p</kbd> | Upgrade packages |
 | <kbd>SPC q q</kbd> | Quit all |
@@ -428,10 +429,13 @@ appears only when `lazyemacs-enable-mail` is set.
 | Keys | Action |
 |---|---|
 | <kbd>SPC TAB TAB</kbd> | New tab |
+| <kbd>SPC TAB '</kbd> | Last session |
 | <kbd>SPC TAB [</kbd> | Previous tab |
 | <kbd>SPC TAB ]</kbd> | Next tab |
 | <kbd>SPC TAB b</kbd> | Pick tab |
-| <kbd>SPC TAB d</kbd> | Close tab |
+| <kbd>SPC TAB c</kbd> | Clone repository |
+| <kbd>SPC TAB d</kbd> | Detach session |
+| <kbd>SPC TAB D</kbd> | Kill session |
 | <kbd>SPC TAB f</kbd> | First tab |
 | <kbd>SPC TAB g</kbd> | Sessions |
 | <kbd>SPC TAB G</kbd> | Move tab to session |
@@ -441,6 +445,8 @@ appears only when `lazyemacs-enable-mail` is set.
 | <kbd>SPC TAB r</kbd> | Rename tab |
 | <kbd>SPC TAB R</kbd> | Layout history forward |
 | <kbd>SPC TAB u</kbd> | Layout history back |
+| <kbd>SPC TAB w</kbd> | New worktree session |
+| <kbd>SPC TAB x</kbd> | Close tab |
 <!-- END GENERATED LEADER -->
 
 <kbd>SPC w</kbd> inherits every key of Vim's <kbd>CTRL-W</kbd> map, as LazyVim
