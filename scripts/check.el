@@ -46,7 +46,7 @@
   (add-hook 'kill-emacs-hook (lambda () (delete-directory state t)))
   (when (getenv "LAZYEMACS_BYTE_COMPILE")
     (lazyemacs-check-byte-compile root state))
-  (dolist (directory '("." "lisp" "examples" "tests" "scripts"))
+  (dolist (directory '("." "lisp" "lisp/extras" "examples" "tests" "scripts"))
     (dolist (file (directory-files (expand-file-name directory root) t "\\.el\\'"))
       (with-temp-buffer
         (insert-file-contents file)

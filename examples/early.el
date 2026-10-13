@@ -18,6 +18,9 @@
 ;; LSP breadcrumbs, reference highlights, inlay hints, and code lenses.
 ;; (setq my/lsp-visual-extras t)
 
+;; Optional extras from lisp/extras/ (M-x lazyemacs-extras lists and toggles them).
+;; (setq lazyemacs-extras '(editor-subword ui-relative-numbers))
+
 ;; For an already installed setup: set LAZYEMACS_OFFLINE=1 before launch.
 
 ;; Optional mail identity (also requires external mu/mbsync/msmtp configuration):

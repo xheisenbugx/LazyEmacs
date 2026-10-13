@@ -73,9 +73,11 @@ Useful commands:
 
 ## Release work that remains
 
-- Package declarations still track archive versions and newest VC revisions.
-  A reviewed lock/snapshot and restore mechanism is needed for reproducible
-  releases; source rollback alone does not restore packages.
+- `lazyemacs-lock.eld` now records installed versions and Git commits, and
+  `lazyemacs-lock-restore` returns Git packages to them. Archive packages
+  still cannot be restored to an older release because ELPA archives publish
+  only their newest version; a full rollback needs an `elpa/` snapshot or a
+  pinned archive mirror.
 - A clean-machine CI matrix should exercise bootstrap, grammar installation,
   GUI/terminal startup, and native Ghostel modules on supported platforms.
 - Emacs 31.1 remains the minimum because result editing uses its native APIs.

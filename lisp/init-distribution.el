@@ -102,6 +102,11 @@ Restart with --debug-init for a backtrace; SPC h D lists failed modules."
         :error)
        nil))))
 
+(defvar lazyemacs-doctor-sections nil
+  "Functions that print additional sections of `lazyemacs-doctor'.
+Each is called with `standard-output' directed at the report and must not
+launch processes or install anything.  Add them with `add-hook'.")
+
 (defun lazyemacs-doctor ()
   "Display a read-only environment report; never install or run external tools."
   (interactive)
@@ -168,7 +173,8 @@ Restart with --debug-init for a backtrace; SPC h D lists failed modules."
         (dolist (entry (sort (copy-sequence package-alist)
                             (lambda (a b) (string< (symbol-name (car a)) (symbol-name (car b))))))
           (princ (format "%-30s %s\n" (car entry)
-                         (package-version-join (package-desc-version (cadr entry))))))))))
+                         (package-version-join (package-desc-version (cadr entry)))))))
+      (run-hooks 'lazyemacs-doctor-sections))))
 
 (make-directory lazyemacs-user-directory t)
 (provide 'init-distribution)

@@ -33,6 +33,7 @@
     ("c" "Config" my/open-init-file)
     ("s" "Restore session" my/session-restore)
     ("l" "Packages" list-packages)
+    ("x" "Lazy Extras" lazyemacs-extras)
     ;; Closes only an emacsclient frame; quits a standalone Emacs.
     ("q" "Quit" save-buffers-kill-terminal))
   "Dashboard actions as (KEY LABEL COMMAND), matching LazyVim's start screen.")
