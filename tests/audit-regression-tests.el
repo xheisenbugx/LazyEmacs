@@ -244,5 +244,56 @@
           (should (equal (my/audit-run-init directory '(list :cycle corfu-cycle)) '(:cycle nil))))
       (delete-directory directory t))))
 
+;;; Folding and structural motions
+
+(ert-deftest my/audit-folds-nest-and-answer-evil-z-commands ()
+  (with-temp-buffer
+    (insert "function outer() {\n  const a = 1;\n  if (a) {\n    call();\n  }\n  return a;\n}\n")
+    (treesit-parser-create 'typescript)
+    (my/fold-setup)
+    (should my/structural-folding)
+    (goto-char (point-min))
+    (search-forward "call")
+    (my/toggle-fold)
+    (should (= 1 (length (my/structural-folds (point-min) (point-max)))))
+    ;; Toggling the outer block keeps the folded inner block.
+    (goto-char (point-min))
+    (search-forward "const")
+    (my/toggle-fold)
+    (should (= 2 (length (my/structural-folds (point-min) (point-max)))))
+    ;; za on the folded line opens that fold.
+    (goto-char (point-min))
+    (my/toggle-fold)
+    (should (= 1 (length (my/structural-folds (point-min) (point-max)))))
+    (evil-open-folds)
+    (should-not (my/structural-folds (point-min) (point-max)))
+    (evil-close-folds)
+    (should (= 2 (length (my/structural-folds (point-min) (point-max)))))))
+
+(ert-deftest my/audit-folding-without-parser-uses-evil-providers ()
+  (require 'org)
+  (with-temp-buffer
+    (org-mode)
+    (insert "* Heading\nbody\n* Next\n")
+    (goto-char (point-min))
+    (let (handler)
+      (cl-letf (((symbol-function 'evil-fold-action)
+                 (lambda (list action)
+                   (setq handler (seq-find (lambda (entry) (evil--mode-p (car entry))) list))
+                   (should (eq action :toggle)))))
+        (my/toggle-fold))
+      ;; Org keeps Evil's outline folding instead of gaining Hideshow.
+      (should (memq 'org-mode (car handler))))
+    (should-not (bound-and-true-p hs-minor-mode)))
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (insert "(defun first ()\n  1)\n\n(defun second ()\n  2)\n")
+    (should (bound-and-true-p hs-minor-mode))
+    (goto-char (point-min))
+    (my/next-function 1)
+    (should (looking-at "(defun second"))
+    (my/previous-function 1)
+    (should (bobp))))
+
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "my/audit-")
