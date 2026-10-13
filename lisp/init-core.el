@@ -54,6 +54,12 @@
 
 ;; macOS Command becomes Super, Option stays Meta, and right Option remains
 ;; available for entering accented/international characters.
+;; These variables exist only in macOS builds; declare them so the module
+;; byte-compiles cleanly on Linux and Windows too.
+(defvar mac-command-modifier)
+(defvar mac-option-modifier)
+(defvar mac-right-option-modifier)
+(defvar ns-use-proxy-icon)
 (when (eq system-type 'darwin)
   (setq mac-command-modifier 'super
         mac-option-modifier 'meta
