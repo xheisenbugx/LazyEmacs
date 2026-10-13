@@ -563,15 +563,20 @@ built, and a directory opens (or creates) the session for its project."
             ((< seconds 86400) (format "%dh ago" (/ seconds 3600)))
             (t (format "%dd ago" (/ seconds 86400)))))))
 
-(defun lazyemacs-sesh--annotation (root layouts time)
-  "Format an annotation from ROOT, LAYOUTS count and last-used TIME."
+(defun lazyemacs-sesh--annotation (root layouts time &optional directory-p)
+  "Format an annotation from ROOT, LAYOUTS count and last-used TIME.
+DIRECTORY-P omits ROOT, which is then already the candidate itself."
   (let ((branch (lazyemacs-sesh--branch root)))
     (concat
-     (propertize (format " %-40s" (if root (abbreviate-file-name root) "")) 'face 'completions-annotations)
-     (propertize (format " %-16s" (if branch (concat " " branch) "")) 'face 'font-lock-constant-face)
-     (propertize (format " %-10s" (if layouts (format "%d layout%s" layouts (if (= layouts 1) "" "s")) ""))
-                 'face 'completions-annotations)
-     (propertize (format " %s" (lazyemacs-sesh--ago time)) 'face 'shadow))))
+     (unless directory-p
+       (propertize (format " %-36s" (if root (abbreviate-file-name root) "no project"))
+                   'face 'completions-annotations))
+     (propertize (format " %-18s" (or branch "")) 'face 'font-lock-constant-face)
+     (unless directory-p
+       (concat
+        (propertize (format " %-10s" (if layouts (format "%d layout%s" layouts (if (= layouts 1) "" "s")) ""))
+                    'face 'completions-annotations)
+        (propertize (format " %s" (lazyemacs-sesh--ago time)) 'face 'shadow))))))
 
 (defun lazyemacs-sesh--configured-root (name)
   "Return the canonical root of configured session NAME."
@@ -630,7 +635,9 @@ built, and a directory opens (or creates) the session for its project."
                                  (mapcar #'car lazyemacs-sesh-sessions)))
          (taken (make-hash-table :test #'equal))
          (item (lambda (icon target &optional display)
-                 (cons (concat icon " " (or display target)) target))))
+                 (cons (if (string-empty-p icon) (or display target)
+                         (concat icon " " (or display target)))
+                       target))))
     ;; A directory that already has a session is reached through that session.
     (dolist (name live)
       (when-let* ((root (lazyemacs-sesh--live-root name))) (puthash root t taken)))
@@ -644,7 +651,7 @@ built, and a directory opens (or creates) the session for its project."
            (zoxide (and (executable-find "zoxide")
                         (lazyemacs-sesh--claim (lazyemacs-sesh--zoxide-directories) taken)))
            (directory-annotate (lambda (directory)
-                                 (lazyemacs-sesh--annotation directory nil nil)))
+                                 (lazyemacs-sesh--annotation directory nil nil t)))
            (directory-source
             (lambda (name narrow icon directories)
               (list :name name :narrow narrow :category 'lazyemacs-session
@@ -1284,9 +1291,9 @@ Each restored tab group is then saved to its own session file."
     (propertize (format " %s " name) 'face 'shadow
                 'help-echo "Session (s-p switches)")))
 
-(defvar lazyemacs-sesh-mode-line '(:eval (lazyemacs-sesh-mode-line-string))
+(defvar lazyemacs-sesh-mode-line-construct '(:eval (lazyemacs-sesh-mode-line-string))
   "Mode line construct showing the current session.")
-(put 'lazyemacs-sesh-mode-line 'risky-local-variable t)
+(put 'lazyemacs-sesh-mode-line-construct 'risky-local-variable t)
 
 (defun lazyemacs-sesh-dashboard-insert (indent width)
   "Insert up to five recent sessions into the dashboard at INDENT, WIDTH wide."
@@ -1355,8 +1362,13 @@ Each restored tab group is then saved to its own session file."
 (add-hook 'window-buffer-change-functions #'lazyemacs-sesh--track-windows)
 (unless (memq #'lazyemacs-sesh-tab-bar-others tab-bar-format)
   (setq tab-bar-format (append tab-bar-format '(lazyemacs-sesh-tab-bar-others))))
-(unless (member 'lazyemacs-sesh-mode-line global-mode-string)
-  (setq global-mode-string (append (ensure-list global-mode-string) '(lazyemacs-sesh-mode-line))))
+(unless (member 'lazyemacs-sesh-mode-line-construct (ensure-list global-mode-string))
+  ;; A mode-line list starting with a symbol is a conditional, so lead with "".
+  (setq global-mode-string
+        (append (if (and (consp global-mode-string) (stringp (car global-mode-string)))
+                    global-mode-string
+                  (cons "" (ensure-list global-mode-string)))
+                '(lazyemacs-sesh-mode-line-construct))))
 
 ;; Batch runs (tests, scripts) never restore, autosave, or write on exit.
 (unless noninteractive

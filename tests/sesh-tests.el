@@ -551,7 +551,10 @@
       (should (string-match-p "\\+[0-9]" (nth 2 item)))
       (should (eq (nth 3 item) 'lazyemacs-sesh-connect)))
     (should (string-match-p "Shown" (lazyemacs-sesh-mode-line-string)))
-    (should (member 'lazyemacs-sesh-mode-line global-mode-string))))
+    (should (member 'lazyemacs-sesh-mode-line-construct global-mode-string))
+    ;; A list starting with a symbol would be a mode-line conditional.
+    (should (stringp (car global-mode-string)))
+    (should (string-match-p "Shown" (eval (cadr lazyemacs-sesh-mode-line-construct) t)))))
 
 (ert-deftest lazyemacs-sesh/keys ()
   (with-temp-buffer
