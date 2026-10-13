@@ -485,11 +485,16 @@ better native tool:
 - **<kbd>C-h/j/k/l</kbd> always move between windows**, even in Insert state
   and terminals. LazyVim's Insert-state <kbd>C-k</kbd> signature help is on
   <kbd>gK</kbd>.
-- **Sessions persist automatically.** Emacs saves the desktop (files, cursor
-  positions, tab groups, layouts) on exit. <kbd>SPC q s</kbd>/<kbd>SPC q l</kbd>
-  restore it, <kbd>SPC q d</kbd> stops saving, and <kbd>SPC q S</kbd> saves
+- **Sessions persist automatically, one file each.** Sessions are saved on
+  switch, detach, idle, and exit, and the ones open at exit reopen at startup.
+  <kbd>SPC q s</kbd> reopens them, <kbd>SPC q l</kbd> reopens the last closed
+  session, <kbd>SPC q d</kbd> stops saving, and <kbd>SPC q S</kbd> saves
   immediately. Running processes are never restored; saved terminals come
   back as placeholders where <kbd>RET</kbd> starts a fresh shell.
+- **<kbd>SPC TAB d</kbd> detaches the session** (sesh-style) and
+  <kbd>SPC TAB D</kbd> kills it; <kbd>SPC TAB x</kbd> closes a single tab.
+  <kbd>SPC p p</kbd> and <kbd>SPC f p</kbd> open the session picker, which also
+  lists projects.
 - **Diagnostics use pickers instead of a Trouble panel.** <kbd>SPC x x</kbd> and
   <kbd>SPC x X</kbd> open searchable, previewing lists.
 - **Git uses Magit** where LazyVim uses lazygit. <kbd>SPC g g</kbd> opens it.
