@@ -27,11 +27,11 @@
 (defconst lazyemacs-dashboard-actions
   '(("f" "Find file" find-file)
     ("n" "New file" my/new-file)
-    ("p" "Projects" project-switch-project)
+    ("p" "Projects" lazyemacs-sesh-connect)
     ("g" "Find text" consult-ripgrep)
     ("r" "Recent files" consult-recent-file)
     ("c" "Config" my/open-init-file)
-    ("s" "Restore session" my/session-restore)
+    ("s" "Restore session" lazyemacs-sesh-restore)
     ("l" "Packages" list-packages)
     ("q" "Quit" save-buffers-kill-emacs))
   "Dashboard actions as (KEY LABEL COMMAND), matching LazyVim's start screen.")
@@ -110,6 +110,8 @@
       (insert-text-button label 'action (lambda (_) (call-interactively command))
                           'follow-link t 'face 'default)
       (insert "\n"))
+    (when (fboundp 'lazyemacs-sesh-dashboard-insert)
+      (lazyemacs-sesh-dashboard-insert indent column-width))
     (when-let* ((files (seq-take (seq-filter #'file-exists-p
                                              (bound-and-true-p recentf-list))
                                  5)))
