@@ -73,12 +73,27 @@
   :custom
   (project-switch-commands 'project-find-file)
   :config
-  ;; Recognize common project manifests even before a repository has its first
-  ;; commit.  Version-control roots are still preferred when present.
-  (when (boundp 'project-vc-extra-root-markers)
-    (setq project-vc-extra-root-markers
-          '("package.json" "pyproject.toml" "Cargo.toml" "go.mod"
-            "pnpm-workspace.yaml" ".projectile"))))
+  ;; Manifests only define a project outside version control.  As
+  ;; `project-vc-extra-root-markers' they made packages/a/package.json beat
+  ;; the repository root of a monorepo.  Tasks and tests still find the
+  ;; nearest manifest themselves (`my/task-root' in init-tasks.el).
+  (add-hook 'project-find-functions #'my/project-try-manifest 90))
+
+(defconst my/project-manifest-markers
+  '("package.json" "pyproject.toml" "Cargo.toml" "go.mod"
+    "pnpm-workspace.yaml" ".projectile")
+  "Files that mark a project root in directories without version control.")
+
+(defun my/project-try-manifest (directory)
+  "Return a project rooted at the nearest manifest above DIRECTORY.
+Runs after `project-try-vc', so only directories outside a repository use it."
+  (when-let* ((root (locate-dominating-file
+                     directory
+                     (lambda (dir)
+                       (seq-some (lambda (marker) (file-exists-p (expand-file-name marker dir)))
+                                 my/project-manifest-markers)))))
+    ;; The same shape `project-try-vc' returns for a marker without a VCS.
+    (list 'vc nil (file-name-as-directory (expand-file-name root)))))
 
 ;;; Dired and Dirvish
 

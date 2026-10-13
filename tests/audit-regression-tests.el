@@ -101,6 +101,47 @@
         (my/show-documentation)
         (should hovered)))))
 
+;;; Projects and tasks
+
+(ert-deftest my/audit-repository-root-wins-and-tasks-use-nearest-manifest ()
+  (my/audit-with-git-repo root
+    (let* ((package (expand-file-name "packages/a/" root))
+           (source (expand-file-name "src/" package)))
+      (make-directory source t)
+      (write-region "{\"scripts\": {\"build\": \"tsc\"}}" nil (expand-file-name "package.json" package))
+      (write-region "{}" nil (expand-file-name "package.json" root))
+      (let ((default-directory source))
+        (should (file-equal-p (project-root (project-current)) root))
+        (should (file-equal-p (my/task-root) package))
+        (should (assoc "script: build" (my/task-choices (my/task-root)))))
+      ;; Without a manifest below the repository root, tasks use the root.
+      (make-directory (expand-file-name "docs/" root))
+      (let ((default-directory (expand-file-name "docs/" root)))
+        (should (file-equal-p (my/task-root) root)))))
+  ;; Outside version control a manifest still defines the project.
+  (let ((root (file-name-as-directory (make-temp-file "lazyemacs-audit-plain-" t))))
+    (unwind-protect
+        (let ((default-directory (expand-file-name "lib/" root)))
+          (make-directory default-directory)
+          (write-region "module x\n" nil (expand-file-name "go.mod" root))
+          (should (file-equal-p (project-root (project-current)) root)))
+      (delete-directory root t))))
+
+(ert-deftest my/audit-go-nearest-test-on-its-own-line ()
+  (let ((root (file-name-as-directory (make-temp-file "lazyemacs-audit-go-" t))))
+    (unwind-protect
+        (with-temp-buffer
+          (setq buffer-file-name (expand-file-name "x_test.go" root))
+          (setq-local major-mode 'go-mode)
+          (insert "package x\n\nfunc TestOne(t *testing.T) {}\n\nfunc TestTwo(t *testing.T) {\n}\n")
+          (goto-char (point-min))
+          (search-forward "func TestTwo")
+          (beginning-of-line)
+          (should (string-match-p "TestTwo" (my/task-test-command root t)))
+          (set-buffer-modified-p nil)
+          (setq buffer-file-name nil))
+      (delete-directory root t))))
+
 ;;; Completion
 
 (ert-deftest my/audit-corfu-return-inserts-only-a-selected-candidate ()
