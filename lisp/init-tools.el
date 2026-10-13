@@ -117,7 +117,8 @@ With prefix FRESH, show a new shell instead, as `my/project-ghostel' does."
   :custom
   (tramp-default-method "ssh")
   (remote-file-name-inhibit-cache nil)
-  (tramp-use-ssh-controlmaster-options t)
+  ;; Emacs 30 renamed `tramp-use-ssh-controlmaster-options'.
+  (tramp-use-connection-share t)
   (tramp-verbose 1)
   :config
   ;; Let packages such as Dirvish and compilation start truly asynchronous

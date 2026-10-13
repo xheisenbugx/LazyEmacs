@@ -16,7 +16,6 @@ This is repeated here in addition to early-init.el so the protection remains
 active when init.el is loaded directly, reloaded, or used by a daemon/client
 workflow.  Explicit `native-compile' calls remain available."
   (setq native-comp-jit-compilation nil
-        native-comp-deferred-compilation nil
         native-comp-enable-subr-trampolines nil
         package-native-compile nil))
 
@@ -101,23 +100,25 @@ visible."
   ;; global value earlier in the session.
   (let ((package-native-compile nil)
         (native-comp-jit-compilation nil)
-        (native-comp-deferred-compilation nil)
         (native-comp-enable-subr-trampolines nil))
     (package-refresh-contents)
     (when (fboundp 'package-quickstart-refresh)
       (package-quickstart-refresh))))
 
 (defun my/package-upgrade-all ()
-  "Refresh and upgrade packages without launching native compilers."
+  "Refresh and upgrade installed packages without launching native compilers.
+Packages that ship with Emacs (Org, Tramp, project...) are left alone even
+though `package-install-upgrade-built-in' is set: replacing them inside a
+running session mixes old and new code.  Restart Emacs afterwards."
   (interactive)
   (let ((package-native-compile nil)
         (native-comp-jit-compilation nil)
-        (native-comp-deferred-compilation nil)
-        (native-comp-enable-subr-trampolines nil))
-    (package-refresh-contents)
-    (package-upgrade-all)
+        (native-comp-enable-subr-trampolines nil)
+        (package-install-upgrade-built-in nil))
+    (package-upgrade-all (called-interactively-p 'interactive))
     (when (fboundp 'package-quickstart-refresh)
-      (package-quickstart-refresh))))
+      (package-quickstart-refresh))
+    (message "Packages upgraded; restart Emacs to load the new versions")))
 
 (provide 'init-packages)
 ;;; init-packages.el ends here

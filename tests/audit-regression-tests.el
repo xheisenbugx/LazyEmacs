@@ -400,5 +400,30 @@
 (ert-deftest my/audit-kill-ring-is-not-written-to-disk ()
   (should-not (memq 'kill-ring savehist-additional-variables)))
 
+;;; Packages and option names
+
+(ert-deftest my/audit-upgrade-all-leaves-built-in-packages-alone ()
+  (let (built-in quickstart said)
+    (cl-letf (((symbol-function 'package-upgrade-all)
+               (lambda (&rest _) (setq built-in package-install-upgrade-built-in)))
+              ((symbol-function 'package-quickstart-refresh) (lambda () (setq quickstart t)))
+              ((symbol-function 'message) (lambda (format &rest args) (setq said (apply #'format format args)))))
+      (should package-install-upgrade-built-in)
+      (my/package-upgrade-all)
+      (should-not built-in)
+      (should quickstart)
+      (should (string-match-p "restart" said)))))
+
+(ert-deftest my/audit-org-disputed-keys-are-set-before-org-loads ()
+  (require 'org)
+  (should org-replace-disputed-keys)
+  (should (eq (keymap-lookup org-mode-map "S-<up>") nil)))
+
+(ert-deftest my/audit-current-option-names ()
+  (require 'tramp)
+  (require 'tramp-sh)
+  (should (eq tramp-use-connection-share t))
+  (should-not native-comp-jit-compilation))
+
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "my/audit-")
