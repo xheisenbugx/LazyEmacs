@@ -1,0 +1,61 @@
+#!/bin/sh
+# lazyemacs-connect: open a directory or session in a running LazyEmacs.
+#
+#   lazyemacs-connect [-c] [-s SOCKET] [DIRECTORY-OR-SESSION]
+#
+# With no argument, connects to the session for the current directory.  A
+# directory opens (or creates) the session of its project; any other word is
+# a session name.  -c creates a frame when Emacs has none visible (a daemon).
+# -s/--socket-name selects the Emacs server, like emacsclient's option.
+# Set EMACSCLIENT to use a specific emacsclient binary.
+#
+# Examples:
+#   lazyemacs-connect                      # this directory's project
+#   lazyemacs-connect ~/Workspace/api      # a project
+#   lazyemacs-connect "$(zoxide query api)"
+#   sesh list | fzf | xargs lazyemacs-connect
+set -eu
+
+usage() {
+  sed -n '2,16s/^# \{0,1\}//p' "$0"
+}
+
+create=0
+socket=
+target=
+while [ $# -gt 0 ]; do
+  case $1 in
+    -c|--create-frame) create=1 ;;
+    -s|--socket-name)
+      [ $# -ge 2 ] || { echo "lazyemacs-connect: $1 needs a value" >&2; exit 2; }
+      shift; socket=$1 ;;
+    --socket-name=*) socket=${1#*=} ;;
+    -h|--help) usage; exit 0 ;;
+    --) shift; target=${1-}; break ;;
+    -*) echo "lazyemacs-connect: unknown option $1" >&2; exit 2 ;;
+    *) target=$1 ;;
+  esac
+  shift
+done
+
+[ -n "$target" ] || target=$PWD
+# Emacs's working directory differs from ours, so send absolute directories.
+if [ -d "$target" ]; then
+  target=$(cd "$target" && pwd -P)
+fi
+
+# Quote the target as an Emacs Lisp string: escape backslashes, then quotes.
+escaped=$(printf '%s' "$target" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+client=${EMACSCLIENT:-emacsclient}
+
+set --
+if [ -n "$socket" ]; then
+  set -- -s "$socket"
+fi
+if [ "$create" = 1 ]; then
+  frames=$("$client" "$@" -e '(lazyemacs-sesh-cli-has-frame-p)' 2>/dev/null || true)
+  if [ "$frames" != t ]; then
+    set -- "$@" -c
+  fi
+fi
+exec "$client" "$@" -n -e "(lazyemacs-sesh-cli-connect \"$escaped\")"

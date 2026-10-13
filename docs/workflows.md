@@ -162,23 +162,157 @@ Opening a project never runs anything; commands only run when you choose them.
 
 LazyEmacs organizes work in three levels, all using Emacs's native tab bar:
 
-- A **session** is a tab group, usually one per project. <kbd>s-p</kbd> (or
-  <kbd>SPC TAB g</kbd>) opens the session picker: the current session first,
-  then the most recent. Type a new name to create one.
+- A **session** is a tab group, usually one per project, like a tmux session.
 - A **layout** is a tab inside a session, holding an arrangement of windows.
   <kbd>SPC TAB TAB</kbd> creates one, <kbd>s-1</kbd>…<kbd>s-9</kbd> select them,
-  and <kbd>SPC TAB o</kbd> closes the others in this session only.
+  <kbd>SPC TAB x</kbd> closes one, and <kbd>SPC TAB o</kbd> closes the others in
+  this session only.
 - **Buffers** are shared, so closing a layout never kills your files or shells.
 
-In the session picker, <kbd>C-.</kbd> offers <kbd>k</kbd> close,
-<kbd>r</kbd> rename, <kbd>o</kbd> open its directory, and <kbd>s</kbd> save.
+The tab bar shows the current session, its layouts, and a dim `+N` for the
+other open sessions; the mode line shows the session name.
 
-The desktop (open files, cursor positions, sessions, and layouts) is saved when
-Emacs exits and restored when it starts. <kbd>SPC q S</kbd> saves right away,
-<kbd>SPC q s</kbd> restores, and <kbd>SPC q d</kbd> skips saving for this run.
+### Connecting
+
+<kbd>s-p</kbd>, <kbd>SPC TAB g</kbd>, and <kbd>SPC p p</kbd> (also
+<kbd>SPC f p</kbd> and <kbd>p</kbd> on the start screen) open one picker, in
+the spirit of [sesh](https://github.com/joshmedeski/sesh). Narrow it by typing
+a key and a space:
+
+| Key | Shows |
+|---|---|
+| <kbd>s</kbd> | ● open sessions, the current one first |
+| <kbd>d</kbd> | ◌ saved sessions that are closed |
+| <kbd>c</kbd> | ⚙ sessions declared in your configuration |
+| <kbd>w</kbd> | Git worktrees of the current repository |
+| <kbd>p</kbd> | known projects |
+| <kbd>z</kbd> | [zoxide](https://github.com/ajeetdsouza/zoxide) directories, when `zoxide` is installed |
+
+Each entry shows its directory, Git branch, layout count, and when you last
+used it. A directory that already has a session appears only once, as that
+session. Choosing an entry switches to an open session, restores a saved one,
+builds a declared one, or creates a session for a directory's project. Typing
+a new name creates an empty session.
+
+<kbd>SPC TAB '</kbd> (or <kbd>s-'</kbd>) returns to the previous session,
+reopening it if it was closed.
+
+### Detach, kill, and the picker's actions
+
+- <kbd>SPC TAB d</kbd> **detaches**: it saves the session and closes its
+  layouts, but keeps its buffers and shells running. Connect again to get the
+  layouts back.
+- <kbd>SPC TAB D</kbd> **kills**, after asking: it closes the layouts and kills
+  the session's buffers (files, Dired, terminals and their processes under the
+  session's directory), except buffers that another open session also shows.
+  The saved layout stays until you forget it.
+
+At least one session stays open; closing the last one opens "Main".
+
+In the picker, <kbd>C-.</kbd> acts on the highlighted entry: <kbd>d</kbd>
+detach, <kbd>D</kbd> kill, <kbd>r</kbd> rename, <kbd>x</kbd> forget the saved
+file, <kbd>o</kbd> Dired, <kbd>g</kbd> Magit, <kbd>t</kbd> terminal,
+<kbd>f</kbd> find file, <kbd>/</kbd> search, <kbd>w</kbd> new Git worktree as a
+session (asks for a branch and creates `../REPO-BRANCH`), <kbd>b</kbd> rebuild
+from its declaration, and <kbd>s</kbd> save. <kbd>SPC TAB w</kbd> also creates
+a worktree session, and <kbd>SPC TAB c</kbd> clones a repository into
+`lazyemacs-sesh-clone-directory` (`~/Workspace/` if it exists, otherwise `~/`)
+in the background and connects to it.
+
+### Session buffers
+
+Buffers remember the sessions that showed them. <kbd>SPC ,</kbd> (and
+<kbd>SPC f b</kbd>) list this session's buffers; type <kbd>a</kbd>
+<kbd>SPC</kbd> for every buffer or <kbd>f</kbd> <kbd>SPC</kbd> for recent
+files. <kbd>H</kbd>/<kbd>L</kbd> cycle through this session's buffers only.
+Nothing is hidden for good: <kbd>SPC f B</kbd> is the plain buffer list. Set
+`lazyemacs-sesh-scope-buffers` to nil to turn the scoping off.
+
+### Saving and restoring
+
+Each session is saved to its own file in `var/sessions/`: its layouts, the
+files, Dired directories, and terminal directories they show, its project
+directory, and when you last used it. Sessions are saved when you switch away,
+detach, after a minute of idle time, and on exit, and they load only when you
+connect. Missing files and directories are skipped.
+
+When Emacs starts, it reopens the sessions that were open when it exited, with
+the same one selected. Start with `--no-desktop` to skip that once, or set
+`lazyemacs-sesh-restore-on-startup` to nil.
+
+| Keys | Action |
+|---|---|
+| <kbd>SPC q s</kbd> | Reopen the sessions open at the last exit |
+| <kbd>SPC q l</kbd> | Reopen the most recently used closed session |
+| <kbd>SPC q S</kbd> | Save every open session now |
+| <kbd>SPC q d</kbd> | Don't save sessions for the rest of this run |
+| <kbd>SPC q i</kbd> | Import the desktop saved by earlier LazyEmacs versions |
+
 Processes are never restored: a saved terminal comes back as a placeholder
-where <kbd>RET</kbd> starts a fresh shell. Start with `--no-desktop` to skip the
-restore once. Session grouping comes from
+where <kbd>RET</kbd> starts a fresh shell.
+
+Each session has a lock file, so two Emacs processes can work on different
+sessions. Connecting to a session that another running Emacs owns stops with
+a message naming that process; a lock left by an Emacs that crashed is
+ignored.
+
+**Upgrading:** earlier versions saved one desktop for everything. It is not
+read automatically; run <kbd>SPC q i</kbd> (`lazyemacs-sesh-import-desktop`)
+once to turn it into session files.
+
+### Declaring sessions
+
+Declare sessions you return to often in `user/config.el`. They appear under
+<kbd>c</kbd> in the picker and are built the first time you connect; after
+that they restore from their saved file (<kbd>C-.</kbd> <kbd>b</kbd> rebuilds
+them):
+
+```elisp
+(lazyemacs-define-session "api"
+  :root "~/Workspace/api"
+  :layouts '(("code" :file "README.md")
+             ("server" :file "src/main.go" :terminal "go run .")
+             ("files" :dired "."))
+  :startup (lambda () (message "Ready")))
+```
+
+A layout can `:file` (visit a file), `:dired` (show a directory), `:terminal`
+(open a shell in the root and run a command, or `""` for just a shell), and
+`:command` (call a command). Several keys split the layout's windows.
+
+A project can also carry a `.lazyemacs-session.el` file with the same property
+list (`:name`, `:layouts`, `:startup`), used when you connect to that project
+the first time. It is read as data, never loaded. Files and directories open
+right away; terminal commands and `:command`/`:startup` functions run only
+after you agree once, and editing the file asks again. Opening a project still
+never runs anything without your consent.
+
+### From the shell
+
+`bin/lazyemacs-connect` connects a running LazyEmacs (it uses `emacsclient`,
+so start the server with `M-x server-start` or `emacs --daemon`):
+
+```sh
+lazyemacs-connect                    # the session for this directory
+lazyemacs-connect ~/Workspace/api    # a project
+lazyemacs-connect api                # a session by name
+lazyemacs-connect -c .               # also open a frame if none is visible
+lazyemacs-connect -s work api        # a server started with another name
+```
+
+It fits the usual terminal tools:
+
+```sh
+lazyemacs-connect "$(zoxide query api)"             # zoxide
+sesh list | fzf | xargs lazyemacs-connect           # sesh's list
+# tmux: open the current pane's directory in Emacs with prefix + e
+bind-key e run-shell 'lazyemacs-connect "#{pane_current_path}"'
+```
+
+On Windows, call `emacsclient -n -e "(lazyemacs-sesh-cli-connect \"C:/path\")"`
+directly; there is no wrapper script yet.
+
+Session grouping comes from
 [project-tab-sessions](https://github.com/xheisenbugx/project-tab-sessions).
 
 ## Git

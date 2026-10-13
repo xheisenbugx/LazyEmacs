@@ -51,6 +51,7 @@
                          init-tools
                          init-tasks
                          init-session
+                         init-sesh
                          init-org
                          init-keymaps
                          init-local-actions

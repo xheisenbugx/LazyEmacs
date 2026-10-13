@@ -3,12 +3,14 @@
 (require 'cl-lib)
 
 (ert-deftest my/session-picker-has-embark-actions ()
-  (should (eq (keymap-lookup global-map "s-p") #'my/session-switch))
+  (should (eq (keymap-lookup global-map "s-p") #'lazyemacs-sesh-connect))
   (should (eq (completion-metadata-get
                (completion-metadata "" #'my/session-completion-table nil)
                'category)
               'lazyemacs-session))
-  (should (eq (lookup-key my/embark-session-map "k") #'my/session-close))
+  ;; Closing from the picker detaches: the layout is saved and can come back.
+  (should (eq (lookup-key my/embark-session-map "k") #'lazyemacs-sesh-detach))
+  (should (eq (keymap-lookup my/embark-session-map "RET") #'lazyemacs-sesh-connect-to))
   (should (equal (alist-get 'lazyemacs-session embark-keymap-alist)
                  'my/embark-session-map)))
 

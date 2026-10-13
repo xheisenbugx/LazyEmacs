@@ -193,7 +193,7 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 
 (lazyemacs-define-leader-map
  'my/leader-file-prefix
- '(("b" "Buffers" consult-project-buffer)
+ '(("b" "Buffers" lazyemacs-sesh-buffer)
    ("B" "Buffers (all)" consult-buffer)
    ("c" "Private config" my/open-init-file)
    ("d" "Recent directories" consult-dir)
@@ -206,7 +206,7 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
    ("j" "Dired here" dired-jump)
    ("n" "New file" my/new-file)
    ("o" "Open externally" crux-open-with)
-   ("p" "Projects" project-switch-project)
+   ("p" "Projects" lazyemacs-sesh-connect)
    ("r" "Recent" consult-recent-file)
    ("R" "Recent (cwd)" my/recent-files-cwd)
    ("s" "Save" save-buffer)
@@ -300,19 +300,20 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
    ("d" "Dired" project-dired)
    ("f" "Find file" project-find-file)
    ("k" "Kill buffers" project-kill-buffers)
-   ("p" "Switch project" project-switch-project)
+   ("p" "Projects and sessions" lazyemacs-sesh-connect)
    ("s" "Search" consult-ripgrep)))
 
 (lazyemacs-define-leader-map
  'my/leader-session-prefix
- '(("d" "Don't save current session" my/session-stop-saving)
+ '(("d" "Don't save current session" lazyemacs-sesh-stop-saving)
    ("f" "Private config" my/open-init-file)
-   ("l" "Restore last session" my/session-restore)
+   ("i" "Import old desktop" lazyemacs-sesh-import-desktop)
+   ("l" "Restore last session" lazyemacs-sesh-restore-last)
    ("p" "Upgrade packages" my/package-upgrade-all)
    ("q" "Quit all" save-buffers-kill-emacs)
    ("r" "Reload module" my/reload-init-file)
-   ("s" "Restore session" my/session-restore)
-   ("S" "Save session" my/session-save)))
+   ("s" "Restore session" lazyemacs-sesh-restore)
+   ("S" "Save session" lazyemacs-sesh-save-all)))
 
 (lazyemacs-define-leader-map
  'my/leader-search-prefix
@@ -407,19 +408,24 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
  'my/leader-workspace-prefix
  '(("<tab>" "New tab" tab-bar-new-tab)
    ("TAB" "New tab" tab-bar-new-tab)
+   ("'" "Last session" lazyemacs-sesh-last)
    ("[" "Previous tab" project-tab-sessions-previous-tab)
    ("]" "Next tab" project-tab-sessions-next-tab)
    ("b" "Pick tab" project-tab-sessions-switch-tab)
-   ("d" "Close tab" tab-bar-close-tab)
+   ("c" "Clone repository" lazyemacs-sesh-clone)
+   ("d" "Detach session" lazyemacs-sesh-detach)
+   ("D" "Kill session" lazyemacs-sesh-kill)
    ("f" "First tab" my/session-first-tab)
-   ("g" "Sessions" my/session-switch)
+   ("g" "Sessions" lazyemacs-sesh-connect)
    ("G" "Move tab to session" tab-bar-change-tab-group)
    ("l" "Last tab" my/session-last-tab)
    ("N" "New named layout" my/session-new-layout)
    ("o" "Close other tabs" my/session-close-other-tabs)
    ("r" "Rename tab" tab-bar-rename-tab)
    ("R" "Layout history forward" tab-bar-history-forward)
-   ("u" "Layout history back" tab-bar-history-back)))
+   ("u" "Layout history back" tab-bar-history-back)
+   ("w" "New worktree session" lazyemacs-sesh-worktree-add)
+   ("x" "Close tab" tab-bar-close-tab)))
 
 (lazyemacs-define-leader-map
  'my/leader-snippet-prefix
@@ -489,7 +495,7 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 
 (defconst lazyemacs-leader-commands
   '(("SPC" "Find files (root)" project-find-file)
-    ("," "Buffers" consult-project-buffer)
+    ("," "Buffers" lazyemacs-sesh-buffer)
     ("/" "Grep (root)" consult-ripgrep)
     (":" "Command history" my/command-history)
     ("." "Toggle scratch" my/scratch-toggle)
@@ -536,9 +542,11 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
                        (lambda () (interactive) (project-tab-sessions-select-tab number)))))
 (keymap-global-set "C-<tab>" #'project-tab-sessions-next-tab)
 (keymap-global-set "C-S-<tab>" #'project-tab-sessions-previous-tab)
-(keymap-global-set "C-x t g" #'my/session-switch)
+(keymap-global-set "C-x t g" #'lazyemacs-sesh-connect)
 (keymap-global-set "C-x t P" #'project-tab-sessions-group-from-project)
-(keymap-global-set "s-p" #'my/session-switch)
+(keymap-global-set "s-p" #'lazyemacs-sesh-connect)
+;; macOS binds s-' to cycling frames; s-` still does that.
+(keymap-global-set "s-'" #'lazyemacs-sesh-last)
 (keymap-global-set "s-t" #'tab-bar-new-tab)
 (keymap-global-set "s-r" #'tab-bar-rename-tab)
 (keymap-global-set "s-w" #'tab-bar-close-tab)
@@ -683,8 +691,8 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
   (kbd "M-j") #'move-text-down
   (kbd "M-k") #'move-text-up)
 (evil-define-minor-mode-key 'normal 'my/editor-shortcuts-mode
-  (kbd "H") #'previous-buffer
-  (kbd "L") #'next-buffer)
+  (kbd "H") #'my/session-previous-buffer
+  (kbd "L") #'my/session-next-buffer)
 
 (defun my/editor-shortcuts-setup ()
   "Enable editing shortcuts only in ordinary editing buffers."

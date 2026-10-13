@@ -23,6 +23,7 @@ optional and only affects the feature that uses it.
 | C compiler | Tree-sitter grammars | For native syntax modes |
 | Language servers, formatters, debuggers | Per language | As needed |
 | aspell or hunspell | <kbd>SPC u s</kbd> spell checking | Optional |
+| [zoxide](https://github.com/ajeetdsouza/zoxide) | Frequent directories in the session picker (<kbd>s-p</kbd>) | Optional |
 
 Check the version you will actually launch with `emacs --version`; package
 repositories often ship older releases.

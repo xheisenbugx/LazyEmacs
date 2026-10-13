@@ -10,13 +10,15 @@
     (emacs-lisp-mode)
     (evil-local-mode 1)
     (evil-normal-state)
-    (dolist (pair '(("H" . previous-buffer) ("L" . next-buffer)
+    (dolist (pair '(("H" . my/session-previous-buffer) ("L" . my/session-next-buffer)
                     ("gi" . evil-insert-resume) ("gI" . my/lsp-find-implementations)
                     ("SPC f t" . my/ghostel-toggle) ("SPC f T" . my/directory-ghostel)
-                    ("SPC f p" . project-switch-project) ("SPC c d" . my/show-diagnostic-at-point)
+                    ("SPC f p" . lazyemacs-sesh-connect) ("SPC c d" . my/show-diagnostic-at-point)
                     ("SPC c R" . crux-rename-file-and-buffer) ("SPC g s" . magit-status)
                     ("SPC g h s" . diff-hl-stage-current-hunk)
-                    ("SPC t l" . my/project-test-last) ("SPC TAB d" . tab-bar-close-tab)
+                    ;; SPC TAB d detaches the session (sesh-style); SPC TAB x closes a tab.
+                    ("SPC t l" . my/project-test-last) ("SPC TAB d" . lazyemacs-sesh-detach)
+                    ("SPC TAB x" . tab-bar-close-tab)
                     ("SPC <tab> <tab>" . tab-bar-new-tab)
                     ("SPC s r" . my/search-replace) ("SPC u f" . my/toggle-global-format-on-save)
                     ("SPC u F" . my/toggle-format-on-save)))
@@ -183,7 +185,7 @@
 
 ;; LazyVim's documented keys, resolved through the real Evil keymaps.
 (defconst my/lazyvim-reference-keys
-  '(("SPC SPC" . project-find-file) ("SPC ," . consult-project-buffer)
+  '(("SPC SPC" . project-find-file) ("SPC ," . lazyemacs-sesh-buffer)
     ("SPC /" . consult-ripgrep) ("SPC :" . my/command-history)
     ("SPC e" . my/project-explorer) ("SPC E" . dirvish-side)
     ("SPC l l" . list-packages) ("SPC n" . my/messages)
@@ -195,8 +197,8 @@
     ("SPC f f" . project-find-file) ("SPC f n" . my/new-file)
     ("SPC g g" . magit-status) ("SPC g G" . my/git-status-cwd)
     ("SPC g L" . my/git-log-cwd) ("SPC g S" . magit-stash)
-    ("SPC q q" . save-buffers-kill-emacs) ("SPC q s" . my/session-restore)
-    ("SPC q l" . my/session-restore) ("SPC q d" . my/session-stop-saving)
+    ("SPC q q" . save-buffers-kill-emacs) ("SPC q s" . lazyemacs-sesh-restore)
+    ("SPC q l" . lazyemacs-sesh-restore-last) ("SPC q d" . lazyemacs-sesh-stop-saving)
     ("SPC s j" . evil-collection-consult-jump-list) ("SPC s t" . my/search-todos)
     ("SPC s \"" . evil-show-registers) ("SPC s k" . describe-bindings)
     ("SPC t T" . my/project-test-all) ("SPC u C" . consult-theme)

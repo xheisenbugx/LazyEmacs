@@ -27,11 +27,11 @@
 (defconst lazyemacs-dashboard-actions
   '(("f" "Find file" find-file)
     ("n" "New file" my/new-file)
-    ("p" "Projects" project-switch-project)
+    ("p" "Projects" lazyemacs-sesh-connect)
     ("g" "Find text" consult-ripgrep)
     ("r" "Recent files" consult-recent-file)
     ("c" "Config" my/open-init-file)
-    ("s" "Restore session" my/session-restore)
+    ("s" "Restore session" lazyemacs-sesh-restore)
     ("l" "Packages" list-packages)
     ("x" "Lazy Extras" lazyemacs-extras)
     ;; Closes only an emacsclient frame; quits a standalone Emacs.
@@ -123,6 +123,8 @@
       (insert-text-button label 'action (lambda (_) (call-interactively command))
                           'follow-link t 'face 'default)
       (insert "\n"))
+    (when (fboundp 'lazyemacs-sesh-dashboard-insert)
+      (lazyemacs-sesh-dashboard-insert indent column-width))
     ;; Remote entries are listed without checking them: probing /ssh: or
     ;; /docker: names would open a TRAMP connection while drawing.
     (when-let* ((files (seq-take (seq-filter (lambda (file)
