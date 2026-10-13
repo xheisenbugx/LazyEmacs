@@ -624,6 +624,158 @@
     (should (equal (lazyemacs-sesh-cli-connect "From shell") "From shell"))
     (should (lazyemacs-sesh--live-p "From shell"))))
 
+(defun lazyemacs-sesh-test-side-window (&optional select)
+  "Show a *Warnings*-like popup in a bottom side window; SELECT it if non-nil."
+  (let ((window (display-buffer-in-side-window
+                 (get-buffer-create "*Warnings*") '((side . bottom) (slot . 0)))))
+    (when select (select-window window))
+    window))
+
+(defun lazyemacs-sesh-test-saved-session (name &rest files)
+  "Save a session NAME with FILES split side by side, then close it."
+  (let ((root (apply #'lazyemacs-sesh-test-project name files)))
+    (lazyemacs-sesh-connect-to root)
+    (find-file (expand-file-name (car files) root))
+    (dolist (file (cdr files))
+      (select-window (split-window-right))
+      (find-file (expand-file-name file root)))
+    (tab-bar-rename-tab "code")
+    (lazyemacs-sesh-save name)
+    (lazyemacs-sesh--close name)
+    root))
+
+(defun lazyemacs-sesh-test-state-has-side-p (state)
+  "Return non-nil when window STATE mentions a side window."
+  (string-match-p "window-side" (prin1-to-string state)))
+
+(ert-deftest lazyemacs-sesh/restore-with-a-selected-side-window ()
+  (lazyemacs-sesh-test
+    (let ((root (lazyemacs-sesh-test-saved-session "sided" "server.el" "routes.el")))
+      (unwind-protect
+          (progn
+            (lazyemacs-sesh-test-side-window t)
+            (should (window-parameter (selected-window) 'window-side))
+            (lazyemacs-sesh-connect-to "sided")
+            (should (lazyemacs-sesh--live-p "sided"))
+            (should (equal (sort (mapcar (lambda (w) (buffer-name (window-buffer w)))
+                                         (window-list nil 'nomini))
+                                 #'string<)
+                           '("routes.el" "server.el")))
+            (should-not (get-file-buffer (expand-file-name "missing" root)))
+            ;; Restoring a layout into a tab whose selected window is a side window.
+            (let ((tab (car (plist-get (lazyemacs-sesh--saved-data "sided") :tabs))))
+              (lazyemacs-sesh-connect-to "Scratch layout")
+              (lazyemacs-sesh-test-side-window t)
+              (lazyemacs-sesh--put-state (plist-get tab :state) (plist-get tab :buffers))
+              (should-not (seq-some (lambda (w) (window-parameter w 'window-side))
+                                    (window-list nil 'nomini)))
+              (should (= 2 (length (window-list nil 'nomini)))))
+            (lazyemacs-sesh-connect-to "sided")
+            (lazyemacs-sesh--close "Scratch layout")
+            ;; The same at startup, through the placeholder group.
+            (lazyemacs-sesh-save-all t)
+            (lazyemacs-sesh--close "sided")
+            (project-tab-sessions-switch "Main")
+            (tab-bar-close-other-tabs)
+            (lazyemacs-sesh-test-side-window t)
+            (should (equal (lazyemacs-sesh-restore t) '("sided")))
+            (should (= 2 (length (window-list nil 'nomini)))))
+        (when (get-buffer "*Warnings*") (kill-buffer "*Warnings*"))))))
+
+(ert-deftest lazyemacs-sesh/failed-restore-cleans-up-and-is-kept ()
+  (lazyemacs-sesh-test
+    (lazyemacs-sesh-test-saved-session "good" "a.txt")
+    (lazyemacs-sesh-test-saved-session "bad" "b.txt")
+    (let ((bad-file (with-temp-buffer
+                      (insert-file-contents (lazyemacs-sesh--file "bad"))
+                      (buffer-string)))
+          (put-state (symbol-function 'lazyemacs-sesh--put-state))
+          (lazyemacs-sesh--failed nil)
+          (lazyemacs-sesh--unsaveable nil))
+      (lazyemacs-sesh--write-file lazyemacs-sesh-state-file
+                                  '(:sessions ("bad" "good") :current "good"))
+      (project-tab-sessions-switch "Main")
+      (tab-bar-close-other-tabs)
+      (cl-letf (((symbol-function 'lazyemacs-sesh--put-state)
+                 (lambda (state buffers)
+                   (if (equal (lazyemacs-sesh--current) "bad")
+                       (error "Cannot make side window the only window")
+                     (funcall put-state state buffers)))))
+        (should (equal (lazyemacs-sesh-restore t) '("good"))))
+      (should (equal (lazyemacs-sesh--live-names) '("good")))
+      ;; No placeholder group survives, in any listing.
+      (should-not (seq-some (lambda (tab) (string-prefix-p " " (or (alist-get 'group tab) "")))
+                            (funcall tab-bar-tabs-function)))
+      (should-not (seq-some (lambda (name) (and name (string-prefix-p " " name)))
+                            (my/session-names)))
+      (should-not (seq-some (lambda (item) (string-match-p "lazyemacs-sesh" (cdr item)))
+                            (plist-get (car (lazyemacs-sesh--sources)) :items)))
+      ;; The failed session's file is untouched and stays in the startup list.
+      (lazyemacs-sesh-save-all t)
+      (should (equal bad-file (with-temp-buffer
+                                (insert-file-contents (lazyemacs-sesh--file "bad"))
+                                (buffer-string))))
+      (should (member "bad" (plist-get (lazyemacs-sesh--read-file lazyemacs-sesh-state-file)
+                                       :sessions)))
+      (should (member "bad" lazyemacs-sesh--unsaveable))
+      ;; Connecting again later works and clears the failure.
+      (lazyemacs-sesh-restore)
+      (should (lazyemacs-sesh--live-p "bad"))
+      (should-not (member "bad" lazyemacs-sesh--failed))
+      (should-not (member "bad" lazyemacs-sesh--unsaveable)))))
+
+(ert-deftest lazyemacs-sesh/saved-states-have-no-side-windows-or-popups ()
+  (lazyemacs-sesh-test
+    (let ((root (lazyemacs-sesh-test-project "popups" "a.txt")))
+      (unwind-protect
+          (progn
+            (lazyemacs-sesh-connect-to root)
+            (find-file (expand-file-name "a.txt" root))
+            (save-selected-window
+              (select-window (split-window-below))
+              (switch-to-buffer (get-buffer-create "*Messages*")))
+            (lazyemacs-sesh-test-side-window)
+            (should (lazyemacs-sesh-test-state-has-side-p
+                     (window-state-get (frame-root-window) 'writable)))
+            (lazyemacs-sesh-save "popups")
+            (let* ((data (lazyemacs-sesh--saved-data "popups"))
+                   (state (plist-get (car (plist-get data :tabs)) :state)))
+              (should-not (lazyemacs-sesh-test-state-has-side-p state))
+              (should-not (string-match-p "\\*Warnings\\*\\|\\*Messages\\*" (prin1-to-string state)))
+              (should (string-match-p "a\\.txt" (prin1-to-string state)))
+              (should (plist-get (car (plist-get data :tabs)) :buffers))))
+        (when (get-buffer "*Warnings*") (kill-buffer "*Warnings*"))))
+    ;; Stripping keeps ordinary splits.
+    (should (equal (lazyemacs-sesh--strip-state '(nil leaf (buffer "x")))
+                   '(nil leaf (buffer "x"))))
+    (should-not (lazyemacs-sesh--strip-state
+                 '(nil leaf (parameters (window-side . bottom)) (buffer "x"))))))
+
+(ert-deftest lazyemacs-sesh/empty-layout-never-overwrites-a-good-file ()
+  (lazyemacs-sesh-test
+    (lazyemacs-sesh-test-saved-session "keep" "a.txt")
+    (let ((good (lazyemacs-sesh--saved-data "keep")))
+      (should (lazyemacs-sesh--has-buffers-p good))
+      ;; A live session with the same name but only *scratch* in its layout.
+      (project-tab-sessions-switch "keep")
+      (tab-bar-rename-tab "code")
+      (switch-to-buffer (get-scratch-buffer-create))
+      (should-not (lazyemacs-sesh--save "keep" t))
+      (lazyemacs-sesh-save-all t)
+      (should (equal (plist-get (lazyemacs-sesh--saved-data "keep") :tabs) (plist-get good :tabs)))
+      ;; An explicit save is the user's decision and does overwrite.
+      (lazyemacs-sesh-save "keep")
+      (should-not (lazyemacs-sesh--has-buffers-p (lazyemacs-sesh--saved-data "keep"))))))
+
+(ert-deftest lazyemacs-sesh/missing-lexbind-warnings-do-not-pop-up ()
+  (should (member '(files missing-lexbind-cookie) warning-suppress-types))
+  (let ((warning-minimum-level :warning))
+    (save-window-excursion
+      (delete-other-windows)
+      (display-warning '(files missing-lexbind-cookie) "Missing lexical-binding cookie" :warning)
+      (should (get-buffer "*Warnings*"))
+      (should-not (get-buffer-window "*Warnings*")))))
+
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "lazyemacs-sesh/")
 ;;; sesh-tests.el ends here

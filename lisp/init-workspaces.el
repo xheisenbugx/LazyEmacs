@@ -31,7 +31,9 @@
   "Return session names, current first and then most recently visited."
   (let* ((tabs (funcall tab-bar-tabs-function))
          (current (alist-get 'group (tab-bar--current-tab-find tabs)))
-         (names (delete-dups (mapcar (lambda (tab) (alist-get 'group tab)) tabs))))
+         ;; Groups named with a leading space are internal placeholders.
+         (names (seq-remove (lambda (name) (and name (string-prefix-p " " name)))
+                            (delete-dups (mapcar (lambda (tab) (alist-get 'group tab)) tabs)))))
     (cl-stable-sort
      names (lambda (a b)
              (cond ((equal a current) (not (equal b current)))
