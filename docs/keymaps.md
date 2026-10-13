@@ -10,8 +10,8 @@ under [Intentional differences](#intentional-differences).
 - Every leader group also works as <kbd>C-c</kbd> plus the same letter, from any
   state. For example, <kbd>C-c f f</kbd> is <kbd>SPC f f</kbd> while you type in
   Insert state.
-- <kbd>M-SPC</kbd> opens the same leader from every Evil state, including
-  Insert state and special buffers that use Emacs state.
+- <kbd>M-SPC</kbd> opens the same leader in special buffers that use Emacs
+  state, where <kbd>SPC</kbd> belongs to the buffer.
 - <kbd>SPC ?</kbd> lists the keys of the current major mode. <kbd>SPC s k</kbd>
   searches every active binding.
 

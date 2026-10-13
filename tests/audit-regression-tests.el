@@ -68,8 +68,8 @@
       (should (eq (key-binding (kbd "]q")) #'next-error))
       (should (eq (key-binding "K") #'evil-lookup)))))
 
-(ert-deftest my/audit-alt-space-leader-in-every-state ()
-  (dolist (state '(normal insert emacs))
+(ert-deftest my/audit-alt-space-leader-outside-insert-state ()
+  (dolist (state '(normal emacs))
     (with-temp-buffer
       (special-mode)
       (evil-local-mode 1)

@@ -654,10 +654,11 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
  "C-l" #'windmove-right)
 
 ;; Buffers in Emacs state (special modes, terminals) cannot use SPC, so M-SPC
-;; opens the same leader from every Evil state, as Doom Emacs does.  The C-c
-;; aliases above work everywhere too.
+;; opens the same leader there, as Doom Emacs does.  Insert state keeps M-SPC
+;; for Corfu's completion separator and reaches the leader through the C-c
+;; aliases above.
 (general-define-key
- :states '(normal visual motion insert emacs)
+ :states '(normal visual motion emacs)
  :keymaps 'override
  "M-SPC" my/leader-map)
 
