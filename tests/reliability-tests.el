@@ -139,9 +139,24 @@
     (should-error (my/task-test-command "/tmp/another-project/" nil) :type 'user-error)))
 
 (ert-deftest lazyemacs/session-save-does-not-overwrite-another-owner ()
-  (cl-letf (((symbol-function 'desktop-owner) (lambda (&rest _) (1+ (emacs-pid))))
-            ((symbol-function 'desktop-save) (lambda (&rest _) (ert-fail "Overwrote locked session"))))
-    (should-error (my/session-save) :type 'user-error)))
+  (let ((lazyemacs-sesh-directory (make-temp-file "lazyemacs-sessions-" t))
+        (lazyemacs-sesh-state-file (make-temp-file "lazyemacs-sesh-state-")))
+    (unwind-protect
+        (progn
+          (project-tab-sessions-switch "Owned elsewhere")
+          (tab-bar-rename-tab "layout")
+          (lazyemacs-sesh--write-file (lazyemacs-sesh--file "Owned elsewhere" ".lock")
+                                      (list :pid (1+ (emacs-pid)) :host (system-name)))
+          (cl-letf (((symbol-function 'lazyemacs-sesh--pid-alive-p) (lambda (_) t))
+                    ((symbol-function 'lazyemacs-sesh--write-file)
+                     (lambda (file &rest _)
+                       (when (string-match-p "Owned" file) (ert-fail "Overwrote locked session")))))
+            (should-error (lazyemacs-sesh-save "Owned elsewhere") :type 'user-error)
+            ;; Automatic saves skip the session instead of failing.
+            (my/session-save)))
+      (tab-bar-close-group-tabs "Owned elsewhere")
+      (delete-directory lazyemacs-sesh-directory t)
+      (delete-file lazyemacs-sesh-state-file))))
 
 (ert-deftest lazyemacs/reload-refuses-changing-live-lsp-transport ()
   (cl-letf (((symbol-function 'completing-read) (lambda (&rest _) "init-lsp-booster.el"))

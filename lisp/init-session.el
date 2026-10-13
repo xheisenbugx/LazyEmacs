@@ -1,8 +1,11 @@
-;;; init-session.el --- Persistent desktops and reversible focus -*- lexical-binding: t; -*-
+;;; init-session.el --- Saved terminals, layouts, and reversible focus -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Desktop and tab-bar already serialize native layouts, file positions, tab
-;; groups, and project roots.  Keep process objects and zoom snapshots out.
+;; Sessions are saved one file each by init-sesh.el.  This module keeps the
+;; pieces shared with the older global desktop: terminal placeholders (a
+;; saved shell comes back as a buffer that starts a fresh one), the tab filter
+;; that keeps process objects and zoom snapshots out of saved frames, zoom,
+;; and reading a desktop saved by earlier versions so it can be imported.
 
 ;;; Code:
 (require 'desktop)
@@ -30,34 +33,18 @@
 (unless (advice-member-p #'my/session-filter-tabs 'frameset-filter-tabs)
   (advice-add 'frameset-filter-tabs :around #'my/session-filter-tabs))
 
-(defun my/session-save ()
-  "Save file buffers and native tab groups, without saving buffer contents."
-  (interactive)
-  (when-let* ((owner (desktop-owner my/session-directory)))
-    (unless (eq owner (emacs-pid))
-      (user-error "Session is locked by Emacs PID %s; close that session before saving" owner)))
-  (make-directory my/session-directory t)
-  (desktop-save my/session-directory)
-  (message "Saved project sessions"))
-
-(defun my/session-restore ()
-  "Restore the saved desktop and its project groups."
+(defun my/session-restore-desktop ()
+  "Restore the desktop saved by earlier versions, with its tab groups.
+Used by `lazyemacs-sesh-import-desktop'; sessions now have their own files."
   (interactive)
   (unless (file-exists-p (expand-file-name desktop-base-file-name my/session-directory))
-    (user-error "No saved session yet; sessions are saved on exit or with SPC q S"))
+    (user-error "No saved desktop in %s" my/session-directory))
   (when (eq (desktop-owner my/session-directory) (emacs-pid))
     (desktop-release-lock my/session-directory))
-  (desktop-read my/session-directory))
-
-(defun my/session-stop-saving ()
-  "Stop saving the desktop for the rest of this Emacs session.
-The previously saved session is kept; like LazyVim's `SPC q d', quitting will
-not overwrite it.  Restart Emacs to resume automatic saving."
-  (interactive)
-  (desktop-save-mode -1)
+  (desktop-read my/session-directory)
+  ;; Reading claims the desktop lock; nothing writes this desktop any more.
   (when (eq (desktop-owner my/session-directory) (emacs-pid))
-    (desktop-release-lock my/session-directory))
-  (message "This session will not be saved"))
+    (desktop-release-lock my/session-directory)))
 
 (defun my/session-new-layout (name)
   "Create a named layout tab in the current project session."
@@ -142,10 +129,8 @@ not overwrite it.  Restart Emacs to resume automatic saving."
       desktop-restore-eager 5
       desktop-load-locked-desktop nil)
 
-;; Never enable persistence in batch checks or overwrite a live desktop there.
-(unless noninteractive
-  (make-directory my/session-directory t)
-  (desktop-save-mode 1))
+;; Per-session files (init-sesh.el) replace `desktop-save-mode'; the desktop
+;; settings above only describe where an older desktop can be imported from.
 
 (provide 'init-session)
 ;;; init-session.el ends here
