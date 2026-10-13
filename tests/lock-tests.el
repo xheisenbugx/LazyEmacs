@@ -45,7 +45,7 @@
           (lazyemacs-lock-test--git dir "pack-refs" "--all")
           (should (equal (lazyemacs-lock-git-commit dir) second))
           (should-not (lazyemacs-lock-git-commit temporary-file-directory)))
-      (delete-directory dir t))))
+      (ignore-error permission-denied (delete-directory dir t)))))
 
 (ert-deftest lazyemacs-lock/write-read-round-trip-is-sorted ()
   (pcase-let* ((`(,dir ,_first ,second) (lazyemacs-lock-test--repo))
@@ -63,7 +63,7 @@
             (should (looking-at-p ";;; lazyemacs-lock.eld"))
             ;; One package per line keeps diffs reviewable.
             (should (search-forward "\n (vcpkg " nil t))))
-      (delete-directory dir t)
+      (ignore-error permission-denied (delete-directory dir t))
       (delete-file file))))
 
 (ert-deftest lazyemacs-lock/diff-reports-missing-changed-and-extra ()
@@ -106,7 +106,7 @@
           (with-temp-buffer
             (insert-file-contents (expand-file-name "file.el" dir))
             (should (equal (buffer-string) "one\n"))))
-      (delete-directory dir t))))
+      (ignore-error permission-denied (delete-directory dir t)))))
 
 ;; Defined by other modules when their features are loaded.
 (defvar lazyemacs-sesh-directory)
@@ -132,7 +132,7 @@
                                  "no readable lockfile" "Extras" "Session locks"
                                  "this Emacs" "STALE"))
                 (should (string-search heading text))))))
-      (delete-directory sessions t))))
+      (ignore-error permission-denied (delete-directory sessions t)))))
 
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "lazyemacs-lock/")

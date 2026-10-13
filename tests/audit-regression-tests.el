@@ -14,7 +14,10 @@
          (let ((default-directory ,directory))
            (call-process "git" nil nil nil "init" "-q")
            ,@body)
-       (delete-directory ,directory t))))
+       ;; Windows keeps a directory locked while a file-notify watch (Dired,
+       ;; auto-revert) is open on it; a leftover temp directory is harmless.
+       (when (fboundp 'file-notify-rm-all-watches) (file-notify-rm-all-watches))
+       (ignore-error permission-denied (delete-directory ,directory t)))))
 
 (ert-deftest my/audit-magit-keeps-its-own-keys ()
   (require 'magit)
@@ -125,7 +128,7 @@
           (make-directory default-directory)
           (write-region "module x\n" nil (expand-file-name "go.mod" root))
           (should (file-equal-p (project-root (project-current)) root)))
-      (delete-directory root t))))
+      (ignore-error permission-denied (delete-directory root t)))))
 
 (ert-deftest my/audit-go-nearest-test-on-its-own-line ()
   (let ((root (file-name-as-directory (make-temp-file "lazyemacs-audit-go-" t))))
@@ -140,7 +143,7 @@
           (should (string-match-p "TestTwo" (my/task-test-command root t)))
           (set-buffer-modified-p nil)
           (setq buffer-file-name nil))
-      (delete-directory root t))))
+      (ignore-error permission-denied (delete-directory root t)))))
 
 ;;; Editing
 
@@ -213,7 +216,7 @@
           ;; Batch runs stay strict, so CI and tests still fail loudly.
           (let ((lazyemacs-strict-modules t))
             (should-error (lazyemacs-require-module 'lazyemacs-audit-broken))))
-      (delete-directory directory t))))
+      (ignore-error permission-denied (delete-directory directory t)))))
 
 (defun my/audit-run-init (user-directory form)
   "Start a disposable Emacs using USER-DIRECTORY, evaluate FORM, return output."
@@ -242,7 +245,7 @@
           (with-temp-file (expand-file-name "custom.el" directory)
             (insert ";;; -*- lexical-binding: t; -*-\n(custom-set-variables '(corfu-cycle nil))\n"))
           (should (equal (my/audit-run-init directory '(list :cycle corfu-cycle)) '(:cycle nil))))
-      (delete-directory directory t))))
+      (ignore-error permission-denied (delete-directory directory t)))))
 
 ;;; Folding and structural motions
 
@@ -337,7 +340,7 @@
             (should flycheck-mode))
           (set-buffer-modified-p nil)
           (setq buffer-file-name nil))
-      (delete-directory directory t)))
+      (ignore-error permission-denied (delete-directory directory t))))
   (with-temp-buffer
     (emacs-lisp-mode)
     (should-not (bound-and-true-p flycheck-mode))))

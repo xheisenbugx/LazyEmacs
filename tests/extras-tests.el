@@ -11,7 +11,7 @@
          (lazyemacs-extras-loaded nil)
          (lazyemacs-failed-extras nil))
      (unwind-protect (progn ,@body)
-       (delete-directory lazyemacs-user-directory t))))
+       (ignore-error permission-denied (delete-directory lazyemacs-user-directory t)))))
 
 (ert-deftest lazyemacs-extras/discovery-lists-descriptions ()
   (let ((available (lazyemacs-extras-available)))

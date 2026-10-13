@@ -37,7 +37,8 @@
            (when (string-prefix-p lazyemacs-sesh-test-dir (expand-file-name file))
              (with-current-buffer buffer (set-buffer-modified-p nil))
              (kill-buffer buffer))))
-       (delete-directory lazyemacs-sesh-test-dir t))))
+       (when (fboundp 'file-notify-rm-all-watches) (file-notify-rm-all-watches))
+       (ignore-error permission-denied (delete-directory lazyemacs-sesh-test-dir t)))))
 
 (defun lazyemacs-sesh-test-project (name &rest files)
   "Create directory NAME in the test directory holding FILES; return it."
@@ -126,7 +127,7 @@
       (lazyemacs-sesh--close "gone")
       (kill-buffer (get-file-buffer a))
       (kill-buffer (dired-noselect root))
-      (delete-directory root t)
+      (ignore-error permission-denied (delete-directory root t))
       (lazyemacs-sesh-connect-to "gone")
       (should (lazyemacs-sesh--live-p "gone"))
       (should-not (get-file-buffer a))
@@ -307,7 +308,7 @@
             (project-tab-sessions-select-tab 2)
             (with-current-buffer (window-buffer)
               (should (derived-mode-p 'dired-mode))
-              (should (equal default-directory (expand-file-name "docs/" root))))
+              (should (equal (expand-file-name default-directory) (expand-file-name "docs/" root))))
             (project-tab-sessions-select-tab 3)
             (should (= 2 (length (window-list nil 'nomini))))
             (should (equal sent (list (cons terminal "make serve"))))
