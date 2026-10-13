@@ -751,6 +751,32 @@
     (should-not (lazyemacs-sesh--strip-state
                  '(nil leaf (parameters (window-side . bottom)) (buffer "x"))))))
 
+(ert-deftest lazyemacs-sesh/unrestorable-window-falls-back-to-its-last-file ()
+  (lazyemacs-sesh-test
+    (let* ((root (lazyemacs-sesh-test-project "history" "server.el" "routes.el"))
+           (status (get-buffer-create "*status-like*")))
+      (unwind-protect
+          (progn
+            (lazyemacs-sesh-connect-to root)
+            (find-file (expand-file-name "server.el" root))
+            (select-window (split-window-right))
+            (find-file (expand-file-name "routes.el" root))
+            ;; Like Magit taking over the window that showed routes.el.
+            (switch-to-buffer status)
+            (lazyemacs-sesh-save "history")
+            (let ((text (prin1-to-string
+                         (plist-get (car (plist-get (lazyemacs-sesh--saved-data "history") :tabs))
+                                    :state))))
+              (should (string-match-p "routes\\.el" text))
+              (should-not (string-match-p "status-like" text)))
+            (lazyemacs-sesh--close "history")
+            (lazyemacs-sesh-connect-to "history")
+            (should (equal (sort (mapcar (lambda (w) (buffer-name (window-buffer w)))
+                                         (window-list nil 'nomini))
+                                 #'string<)
+                           '("routes.el" "server.el"))))
+        (kill-buffer status)))))
+
 (ert-deftest lazyemacs-sesh/empty-layout-never-overwrites-a-good-file ()
   (lazyemacs-sesh-test
     (lazyemacs-sesh-test-saved-session "keep" "a.txt")

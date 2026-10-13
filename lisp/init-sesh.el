@@ -290,11 +290,38 @@ They belong to the moment (warnings, help, compilation), not the layout."
               (t (cons (car node)
                        (append (seq-remove #'lazyemacs-sesh--window-node-p (cdr node)) kept))))))))
 
+(defun lazyemacs-sesh--restorable-name-p (name)
+  "Return non-nil when buffer NAME is live and can be recreated."
+  (when-let* ((buffer (and (stringp name) (get-buffer name))))
+    (lazyemacs-sesh--buffer-spec buffer)))
+
+(defun lazyemacs-sesh--prefer-restorable (node)
+  "Show the most recent restorable buffer in windows of NODE that lack one.
+A window showing Magit or help after a file comes back with that file
+instead of *scratch*; the window's own history says which one."
+  (cond
+   ((not (lazyemacs-sesh--window-node-p node)) node)
+   ((eq (car node) 'leaf)
+    (let* ((attributes (cdr node))
+           (buffer (assq 'buffer attributes))
+           (previous (seq-find (lambda (entry) (lazyemacs-sesh--restorable-name-p (car-safe entry)))
+                               (cdr (assq 'prev-buffers attributes)))))
+      (if (or (not buffer) (lazyemacs-sesh--restorable-name-p (cadr buffer)) (not previous))
+          node
+        (let ((props (copy-alist (cddr buffer))))
+          (setf (alist-get 'start props) (nth 1 previous)
+                (alist-get 'point props) (nth 2 previous))
+          (cons 'leaf (mapcar (lambda (item)
+                                (if (eq item buffer) `(buffer ,(car previous) ,@props) item))
+                              attributes))))))
+   (t (cons (car node) (mapcar #'lazyemacs-sesh--prefer-restorable (cdr node))))))
+
 (defun lazyemacs-sesh--strip-state (state)
   "Remove side windows and popups from window STATE.
 A state is (SIZES . ROOT-NODE); nil means nothing worth keeping."
   (when (and (consp state) (lazyemacs-sesh--window-node-p (cdr state)))
-    (when-let* ((root (lazyemacs-sesh--strip-node (cdr state))))
+    (when-let* ((root (lazyemacs-sesh--strip-node
+                       (lazyemacs-sesh--prefer-restorable (cdr state)))))
       (cons (car state) root))))
 
 (defun lazyemacs-sesh--terminal-p (buffer)
