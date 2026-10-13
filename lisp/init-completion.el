@@ -146,8 +146,15 @@
 (defun my/recent-files-cwd ()
   "Pick a recent file under the current directory."
   (interactive)
-  (let* ((directory default-directory)
-         (recentf-list (seq-filter (lambda (file) (file-in-directory-p file directory))
+  (let* ((directory (expand-file-name default-directory))
+         (host (file-remote-p directory))
+         ;; Compare names, not files: `file-in-directory-p' would resolve
+         ;; every remote entry through TRAMP.  Only same-host entries count.
+         (recentf-list (seq-filter (lambda (file)
+                                     (and (equal (file-remote-p file) host)
+                                          (if host
+                                              (string-prefix-p directory (expand-file-name file))
+                                            (file-in-directory-p file directory))))
                                    recentf-list)))
     (consult-recent-file)))
 

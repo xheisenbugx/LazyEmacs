@@ -342,5 +342,63 @@
     (emacs-lisp-mode)
     (should-not (bound-and-true-p flycheck-mode))))
 
+;;; Dashboard, recent files and history
+
+(ert-deftest my/audit-remote-recent-files-are-never-probed ()
+  (let ((recentf-list '("/scp:host:/srv/remote.txt" "/docker:box:/app/x.py"))
+        (local (make-temp-file "lazyemacs-audit-recent-"))
+        probed)
+    (unwind-protect
+        (progn
+          (push local recentf-list)
+          (cl-letf* ((original (symbol-function 'file-exists-p))
+                     ((symbol-function 'file-exists-p)
+                      (lambda (file)
+                        (when (string-match-p "\\`/\\(?:scp\\|docker\\):" file)
+                          (ert-fail (format "Probed remote file %s" file)))
+                        (push file probed)
+                        (funcall original file)))
+                     ((symbol-function 'file-in-directory-p)
+                      (lambda (file &rest _)
+                        (when (file-remote-p file) (ert-fail "Resolved a remote file"))
+                        nil))
+                     ((symbol-function 'consult-recent-file) #'ignore))
+            (with-current-buffer (lazyemacs-dashboard-buffer)
+              (unwind-protect
+                  (progn
+                    (should (string-match-p "remote.txt" (buffer-string)))
+                    (should (member local probed)))
+                (kill-buffer)))
+            (let ((default-directory temporary-file-directory))
+              (my/recent-files-cwd))))
+      (delete-file local))))
+
+(ert-deftest my/audit-dashboard-redraws-only-for-width-and-keeps-line ()
+  (save-window-excursion
+    (let ((recentf-list nil) renders)
+      (switch-to-buffer (lazyemacs-dashboard-buffer))
+      (lazyemacs-dashboard--render)
+      (forward-line 12)
+      (set-window-point (selected-window) (point))
+      (let ((line (line-number-at-pos)))
+        (advice-add 'lazyemacs-dashboard--render :before (lambda (&rest _) (push t renders))
+                    '((name . audit-spy)))
+        (unwind-protect
+            (progn
+              (lazyemacs-dashboard--resize (selected-window))
+              (should-not renders)
+              (setq lazyemacs-dashboard--width 1)
+              (lazyemacs-dashboard--resize (selected-window))
+              (should renders)
+              (should (= line (line-number-at-pos (window-point)))))
+          (advice-remove 'lazyemacs-dashboard--render 'audit-spy)
+          (kill-buffer))))))
+
+(ert-deftest my/audit-dashboard-q-closes-client-frames-only ()
+  (should (eq (keymap-lookup lazyemacs-dashboard-mode-map "q") #'save-buffers-kill-terminal)))
+
+(ert-deftest my/audit-kill-ring-is-not-written-to-disk ()
+  (should-not (memq 'kill-ring savehist-additional-variables)))
+
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "my/audit-")
