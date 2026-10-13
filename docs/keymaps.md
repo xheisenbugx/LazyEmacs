@@ -115,7 +115,6 @@ appears only when `lazyemacs-enable-mail` is set.
 | <kbd>SPC ?</kbd> | Buffer keymaps |
 | <kbd>SPC e</kbd> | Explorer (root) |
 | <kbd>SPC E</kbd> | Explorer (cwd) |
-| <kbd>SPC l</kbd> | Packages |
 | <kbd>SPC L</kbd> | LazyEmacs changelog |
 | <kbd>SPC n</kbd> | Notification history |
 
@@ -253,6 +252,16 @@ appears only when `lazyemacs-enable-mail` is set.
 | <kbd>SPC j l</kbd> | Line |
 | <kbd>SPC j o</kbd> | Outline |
 | <kbd>SPC j w</kbd> | Word (avy) |
+
+### <kbd>SPC l</kbd> Packages (also <kbd>C-c l</kbd>)
+
+| Keys | Action |
+|---|---|
+| <kbd>SPC l l</kbd> | Packages |
+| <kbd>SPC l u</kbd> | Update packages |
+| <kbd>SPC l r</kbd> | Restore lockfile |
+| <kbd>SPC l s</kbd> | Lockfile status |
+| <kbd>SPC l x</kbd> | Extras |
 
 ### <kbd>SPC m</kbd> Multiple cursors (also <kbd>C-c m</kbd>)
 

@@ -116,7 +116,7 @@
   (let* ((sessions (make-temp-file "lazyemacs-sesh-" t))
          (lazyemacs-sesh-directory sessions)
          (lazyemacs-lock-file (expand-file-name "missing-lock.eld" sessions))
-         (lazyemacs-failed-modules '((init-broken . "boom"))))
+         (lazyemacs-failed-modules '((init-broken error "boom"))))
     (unwind-protect
         (progn
           (write-region (number-to-string (emacs-pid)) nil (expand-file-name "mine.lock" sessions))
@@ -127,7 +127,7 @@
             (lazyemacs-doctor))
           (with-current-buffer "*LazyEmacs Doctor*"
             (let ((text (buffer-string)))
-              (dolist (heading '("Module loading" "FAILED init-broken: boom"
+              (dolist (heading '("Failed modules: init-broken (boom)"
                                  "Language tooling" "Python" "Package lockfile"
                                  "no readable lockfile" "Extras" "Session locks"
                                  "this Emacs" "STALE"))
