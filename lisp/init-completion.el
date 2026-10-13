@@ -135,7 +135,7 @@
   ;; autoload that deleted function from embark-consult.  Remove the stale hook
   ;; when reloading the config; current embark-consult installs its replacement,
   ;; `consult--default-completion-list-preview-setup', automatically.
-  (remove-hook 'embark-collect-mode-hook #'consult-preview-at-point-mode))
+  (remove-hook 'embark-collect-mode-hook 'consult-preview-at-point-mode))
 
 (defun my/find-file-cwd ()
   "Pick a file under the current directory, without switching to project root."

@@ -13,11 +13,11 @@ args = parser.parse_args()
 environment = {**os.environ, "LAZYEMACS_OFFLINE": "1"}
 
 
-def run(script, suite=None):
-    env = {**environment}
+def run(script, suite=None, label=None, extra=None):
+    env = {**environment, **(extra or {})}
     if suite:
         env["LAZYEMACS_TEST_SUITE"] = suite.name
-    print(f"Checking {suite.name if suite else script}", flush=True)
+    print(f"Checking {label or (suite.name if suite else script)}", flush=True)
     result = subprocess.run([args.emacs, "-Q", "--batch", "--load", script], cwd=ROOT, env=env)
     if result.returncode:
         raise SystemExit(result.returncode)
@@ -25,6 +25,8 @@ def run(script, suite=None):
 
 run("scripts/check.el")
 if not args.offline_only:
+    # Needs installed packages; compiles into a temporary directory.
+    run("scripts/check.el", label="byte compilation", extra={"LAZYEMACS_BYTE_COMPILE": "1"})
     for suite in sorted((ROOT / "tests").glob("*-tests.el")):
         if suite.name != "distribution-tests.el":
             run("scripts/integration.el", suite)

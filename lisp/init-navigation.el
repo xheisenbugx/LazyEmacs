@@ -97,6 +97,9 @@ Runs after `project-try-vc', so only directories outside a repository use it."
 
 ;;; Dired and Dirvish
 
+(defvar ls-lisp-dirs-first)
+(defvar ls-lisp-use-insert-directory-program)
+
 (use-package dired
   :ensure nil
   :commands (dired dired-jump)

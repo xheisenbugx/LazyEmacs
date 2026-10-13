@@ -22,7 +22,7 @@ Windows), documentation, and features are all welcome.
 
 ```sh
 emacs --init-directory /path/to/your/checkout    # try your change
-python3 scripts/test.py                           # run every suite
+python3 scripts/test.py                           # every suite, plus a warning-free byte compile
 python3 scripts/test.py --offline-only            # no packages needed
 LAZYEMACS_TEST_SUITE=lazyvim-keymap-tests.el emacs -Q --batch --load scripts/integration.el
 ```

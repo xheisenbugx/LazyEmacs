@@ -42,6 +42,28 @@ for the first time.  `my/lsp-start' remains an immediate manual command."
 
 (defvar flycheck-current-errors)
 (defvar flycheck-display-errors-function)
+(defvar apheleia-formatters)
+
+;; Packages loaded on demand.  Every caller requires the library or checks
+;; that lsp-mode is attached first.
+(declare-function apheleia--get-formatters "apheleia" (&optional interactive))
+(declare-function flycheck-display-error-at-point "flycheck" ())
+(declare-function flycheck-display-error-messages "flycheck" (errors))
+(declare-function flycheck-error-level "flycheck" (err))
+(declare-function flycheck-error-pos "flycheck" (err))
+(declare-function lsp--locations-to-xref-items "lsp-mode" (locations))
+(declare-function lsp--text-document-position-params "lsp-mode" (&optional identifier position))
+(declare-function lsp-describe-thing-at-point "lsp-mode" ())
+(declare-function lsp-enable-which-key-integration "lsp-mode" (&optional all-modes))
+(declare-function lsp-execute-code-action-by-kind "lsp-mode" (command-kind))
+(declare-function lsp-feature? "lsp-mode" (method))
+(declare-function lsp-find-declaration "lsp-mode" (&optional display-action))
+(declare-function lsp-find-type-definition "lsp-mode" (&optional display-action))
+(declare-function lsp-format-region "lsp-mode" (s e))
+(declare-function lsp-inlay-hints-mode "lsp-mode" (&optional arg))
+(declare-function lsp-lens-refresh "lsp-lens" (&optional render? buffer))
+(declare-function lsp-request "lsp-mode" (method params &rest args))
+(declare-function lsp-signature-activate "lsp-mode" ())
 
 (defvar-local my/lsp-auto-start-timer nil
   "Pending automatic lsp-mode startup timer for the current buffer.")

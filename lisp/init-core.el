@@ -186,6 +186,7 @@ Restart Emacs after changing early-init.el or package initialization."
 
 ;; A server makes subsequent `emacsclient' invocations effectively instant.
 ;; Batch validation must not leave a background server behind.
+(declare-function server-running-p "server" (&optional name))
 (use-package server
   :ensure nil
   :if (not noninteractive)
