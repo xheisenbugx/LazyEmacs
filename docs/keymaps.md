@@ -10,6 +10,8 @@ under [Intentional differences](#intentional-differences).
 - Every leader group also works as <kbd>C-c</kbd> plus the same letter, from any
   state. For example, <kbd>C-c f f</kbd> is <kbd>SPC f f</kbd> while you type in
   Insert state.
+- <kbd>M-SPC</kbd> opens the same leader from every Evil state, including
+  Insert state and special buffers that use Emacs state.
 - <kbd>SPC ?</kbd> lists the keys of the current major mode. <kbd>SPC s k</kbd>
   searches every active binding.
 
@@ -32,7 +34,7 @@ under [Intentional differences](#intentional-differences).
 
 | Keys | Action |
 |---|---|
-| <kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd> | Go to the left/lower/upper/right window, also from Insert state and terminals |
+| <kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd> | Go to the left/lower/upper/right window (Normal state) |
 | <kbd>C-Up</kbd> <kbd>C-Down</kbd> <kbd>C-Left</kbd> <kbd>C-Right</kbd> | Resize the window |
 | <kbd>H</kbd> / <kbd>L</kbd>, <kbd>[b</kbd> / <kbd>]b</kbd> | Previous/next buffer |
 | <kbd>M-j</kbd> / <kbd>M-k</kbd> | Move the line or selection down/up |
@@ -51,7 +53,7 @@ under [Intentional differences](#intentional-differences).
 | <kbd>gI</kbd> | Implementations |
 | <kbd>gy</kbd> | Type definition |
 | <kbd>gD</kbd> | Declaration |
-| <kbd>K</kbd> | Documentation |
+| <kbd>K</kbd> | Documentation for the symbol at point (LSP hover, Helpful, or ElDoc) |
 | <kbd>gK</kbd> | Signature help |
 | <kbd>gai</kbd> / <kbd>gao</kbd> | Incoming/outgoing calls |
 | <kbd>]d</kbd> / <kbd>[d</kbd> | Next/previous diagnostic |
@@ -60,8 +62,8 @@ under [Intentional differences](#intentional-differences).
 | <kbd>]q</kbd> / <kbd>[q</kbd> | Next/previous search, compilation, or quickfix result |
 | <kbd>]h</kbd> / <kbd>[h</kbd> | Next/previous Git hunk |
 | <kbd>]t</kbd> / <kbd>[t</kbd> | Next/previous TODO comment |
-| <kbd>]m</kbd> / <kbd>[m</kbd> | Next/previous function start (tree-sitter) |
-| <kbd>za</kbd> | Toggle the fold around point |
+| <kbd>]m</kbd> / <kbd>[m</kbd> | Next/previous function start (tree-sitter, else the mode's defuns) |
+| <kbd>za</kbd> / <kbd>zo</kbd> / <kbd>zc</kbd>, <kbd>zR</kbd> / <kbd>zM</kbd> | Toggle/open/close the fold around point, open/close all |
 | <kbd>C-o</kbd> / <kbd>C-i</kbd> | Jump back/forward, including across LSP jumps |
 
 ## Motions, text objects, and surround
@@ -74,7 +76,6 @@ under [Intentional differences](#intentional-differences).
 | <kbd>gsa</kbd> + motion + char | Add surrounding (mini.surround style) |
 | <kbd>gsd</kbd> + char | Delete surrounding |
 | <kbd>gsr</kbd> + old + new | Replace surrounding |
-| <kbd>ys</kbd> / <kbd>ds</kbd> / <kbd>cs</kbd> | The same, with vim-surround keys |
 | <kbd>gz</kbd> | Multiple cursors prefix (also <kbd>SPC m</kbd>) |
 
 Text objects work after operators (<kbd>d</kbd>, <kbd>c</kbd>, <kbd>y</kbd>) and in
@@ -482,9 +483,16 @@ Standard Emacs keys keep working and use the richer pickers:
 These are deliberate, usually because Emacs already owns the key or has a
 better native tool:
 
-- **<kbd>C-h/j/k/l</kbd> always move between windows**, even in Insert state
-  and terminals. LazyVim's Insert-state <kbd>C-k</kbd> signature help is on
-  <kbd>gK</kbd>.
+- **Mode keys come first.** The keys above are global Evil bindings, so Magit,
+  Dired, and other special modes keep their own <kbd>s</kbd>, <kbd>f</kbd>,
+  <kbd>t</kbd>, <kbd>gr</kbd>, <kbd>K</kbd>, and <kbd>C-j</kbd>/<kbd>C-k</kbd>.
+- **<kbd>C-h/j/k/l</kbd> move between windows in Normal state only**, as in
+  LazyVim. While typing, <kbd>C-h</kbd> is Emacs's help prefix and terminals
+  keep these keys; press <kbd>Esc</kbd> first. LazyVim's Insert-state
+  <kbd>C-k</kbd> signature help is on <kbd>gK</kbd>.
+- **Flash owns Operator-pending <kbd>s</kbd>**, so vim-surround's
+  <kbd>ys</kbd>/<kbd>ds</kbd>/<kbd>cs</kbd> are not available; use the
+  <kbd>gs</kbd> surround keys, as LazyVim does.
 - **Sessions persist automatically.** Emacs saves the desktop (files, cursor
   positions, tab groups, layouts) on exit. <kbd>SPC q s</kbd>/<kbd>SPC q l</kbd>
   restore it, <kbd>SPC q d</kbd> stops saving, and <kbd>SPC q S</kbd> saves
