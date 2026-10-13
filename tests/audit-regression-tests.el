@@ -101,5 +101,18 @@
         (my/show-documentation)
         (should hovered)))))
 
+;;; Completion
+
+(ert-deftest my/audit-corfu-return-inserts-only-a-selected-candidate ()
+  (require 'corfu)
+  (with-temp-buffer
+    ;; Stand-in for Corfu's transient keymap, above the global map.
+    (use-local-map corfu-map)
+    (let ((corfu--index -1))
+      ;; Without a selection RET reaches the ordinary newline command.
+      (should (eq (key-binding (kbd "RET")) #'newline)))
+    (let ((corfu--index 0))
+      (should (eq (key-binding (kbd "RET")) #'corfu-insert)))))
+
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "my/audit-")

@@ -249,9 +249,18 @@ Edits update source buffers; finish with backslash c and save files explicitly."
         ([tab] . corfu-next)
         ("S-TAB" . corfu-previous)
         ([backtab] . corfu-previous)
-        ("RET" . corfu-insert)
         ("M-d" . corfu-popupinfo-documentation)
-        ("M-l" . corfu-popupinfo-location)))
+        ("M-l" . corfu-popupinfo-location))
+  :config
+  ;; With `corfu-preselect' set to `prompt', nothing is selected until TAB
+  ;; moves into the list.  RET then inserts the selected candidate; with no
+  ;; selection the binding disappears, so RET falls through to the buffer's
+  ;; own newline command instead of only closing the popup.
+  (keymap-set corfu-map "RET" `(menu-item "" nil :filter ,#'my/corfu-insert-if-selected)))
+
+(defun my/corfu-insert-if-selected (&rest _)
+  "Return `corfu-insert' when a Corfu candidate is selected, else nil."
+  (and (>= corfu--index 0) #'corfu-insert))
 
 (defun my/add-cape-completion-functions ()
   "Append useful fallback completion sources in the current buffer.
