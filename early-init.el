@@ -42,8 +42,8 @@
 ;; during early startup, so their `boundp' guards silently did nothing.  JIT compilation then spawned workers while files were previewed,
 ;; and package refreshes queued entire packages (including tests).  Normal
 ;; byte-compiled packages and Emacs's bundled system .eln files still work.
+;; `native-comp-deferred-compilation' is an obsolete alias of the first one.
 (setq native-comp-jit-compilation nil
-      native-comp-deferred-compilation nil
       native-comp-enable-subr-trampolines nil)
 
 (defun my/restore-startup-state ()

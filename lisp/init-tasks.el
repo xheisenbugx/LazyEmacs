@@ -26,9 +26,24 @@
   (add-to-list 'savehist-additional-variables 'my/project-last-tests)
   (add-to-list 'savehist-additional-variables 'my/project-task-history))
 
+(defconst my/task-manifests
+  '("package.json" "pyproject.toml" "go.mod" "Cargo.toml")
+  "Manifests whose directory is where tasks and tests run.")
+
 (defun my/task-root ()
-  "Return the current canonical project root."
-  (file-name-as-directory (file-truename (project-root (project-current t)))))
+  "Return the canonical directory where tasks and tests run.
+This is the nearest directory with a manifest from `my/task-manifests',
+between `default-directory' and the project root, so a monorepo package
+uses its own package.json; otherwise it is the project root."
+  (let* ((project (file-name-as-directory
+                   (file-truename (project-root (project-current t)))))
+         (package (locate-dominating-file
+                   (file-truename default-directory)
+                   (lambda (dir)
+                     (and (file-in-directory-p dir project)
+                          (seq-some (lambda (file) (file-exists-p (expand-file-name file dir)))
+                                    my/task-manifests))))))
+    (if package (file-name-as-directory package) project)))
 
 (defun my/task-package (root)
   "Read ROOT's package.json, or return nil when absent."
@@ -217,7 +232,9 @@ With NEAREST, narrow to the surrounding supported test."
      ((derived-mode-p 'go-mode 'go-ts-mode)
       (unless (string-suffix-p "_test.go" file) (user-error "Open a Go _test.go file"))
       (let ((names (save-excursion
-                     (goto-char (if nearest (point) (point-min)))
+                     ;; From the end of the line, so point on the
+                     ;; `func TestX(' line itself still finds that test.
+                     (goto-char (if nearest (line-end-position) (point-min)))
                      (if nearest
                          (when (re-search-backward "^func \\(Test[A-Za-z0-9_]+\\)(" nil t)
                            (list (match-string-no-properties 1)))

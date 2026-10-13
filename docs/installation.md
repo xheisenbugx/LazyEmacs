@@ -23,6 +23,7 @@ optional and only affects the feature that uses it.
 | C compiler | Tree-sitter grammars | For native syntax modes |
 | Language servers, formatters, debuggers | Per language | As needed |
 | aspell or hunspell | <kbd>SPC u s</kbd> spell checking | Optional |
+| [zoxide](https://github.com/ajeetdsouza/zoxide) | Frequent directories in the session picker (<kbd>s-p</kbd>) | Optional |
 
 Check the version you will actually launch with `emacs --version`; package
 repositories often ship older releases.
@@ -157,6 +158,10 @@ Markdown, Terraform, GraphQL, `.env`, `.http` (restclient), and Org have
 editing modes without an automatic server. Any other language supported by
 lsp-mode starts with `M-x my/lsp-start`.
 
+Without a server, Emacs Lisp files are checked by the byte compiler, and shell
+scripts by `shellcheck` when it is installed. When a formatter is missing,
+<kbd>SPC c f</kbd> formats with the language server instead, or reindents.
+
 ## Daemon and client
 
 ```sh
@@ -175,9 +180,28 @@ git pull --ff-only
 ```
 
 Restart Emacs afterwards. Your `user/` directory, packages, and sessions are
-ignored by Git and stay in place. Packages update separately with
-<kbd>SPC q p</kbd>; <kbd>SPC l</kbd> shows installed versions. Package updates
-can change behavior, so back up `elpa/` first if you need to roll back.
+ignored by Git and stay in place.
+
+Packages update separately, like LazyVim's `:Lazy update`: <kbd>SPC l u</kbd>
+upgrades them, shows what changed against `lazyemacs-lock.eld`, and asks
+before recording the new versions; <kbd>SPC l l</kbd> lists installed packages.
+
+### Restoring package versions from the lockfile
+
+`lazyemacs-lock.eld` (committed with each release) records the version of every
+package and the exact commit of each package installed from Git. After a fresh
+install or an unwanted update:
+
+1. <kbd>SPC l s</kbd> shows which packages differ from the lockfile.
+2. <kbd>SPC l r</kbd> (`M-x lazyemacs-lock-restore`) lists what it will do,
+   asks, checks Git packages out at their locked commits, rebuilds them, and
+   installs missing packages that an archive still offers. Restart afterwards.
+
+Package archives (GNU ELPA, NonGNU ELPA, MELPA) only publish their newest
+release, so an archive package that differs from the lockfile is reported and
+kept as installed; it is never silently downgraded. To roll those back too,
+back up `elpa/` before updating. Restoring needs the network, so it refuses to
+run with `LAZYEMACS_OFFLINE=1`. See [the lockfile](configuration.md#package-lockfile).
 
 To start with installed packages only (no network), set `LAZYEMACS_OFFLINE=1`.
 

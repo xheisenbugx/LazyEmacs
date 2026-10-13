@@ -22,6 +22,13 @@
       use-dialog-box nil
       use-file-dialog nil)
 
+;; Emacs 31 warns about third-party files without a lexical-binding cookie
+;; (for example yasnippet-snippets).  Users can't fix those files, and the
+;; *Warnings* popup at startup lands in a side window over the restored
+;; layout.  Suppressing the type keeps it in the *Warnings* log, unshown.
+(require 'warnings)
+(add-to-list 'warning-suppress-types '(files missing-lexbind-cookie))
+
 ;; Prefer UTF-8 at every boundary unless a file explicitly declares otherwise.
 (set-language-environment "UTF-8")
 (prefer-coding-system 'utf-8-unix)
@@ -47,6 +54,12 @@
 
 ;; macOS Command becomes Super, Option stays Meta, and right Option remains
 ;; available for entering accented/international characters.
+;; These variables exist only in macOS builds; declare them so the module
+;; byte-compiles cleanly on Linux and Windows too.
+(defvar mac-command-modifier)
+(defvar mac-option-modifier)
+(defvar mac-right-option-modifier)
+(defvar ns-use-proxy-icon)
 (when (eq system-type 'darwin)
   (setq mac-command-modifier 'super
         mac-option-modifier 'meta
@@ -95,8 +108,10 @@
   :custom
   (history-length 1000)
   (savehist-autosave-interval 60)
+  ;; The kill ring is deliberately not saved: it often holds passwords and
+  ;; tokens copied in passing, and savehist writes it to disk in plain text.
   (savehist-additional-variables
-   '(kill-ring search-ring regexp-search-ring)))
+   '(search-ring regexp-search-ring)))
 
 (use-package saveplace
   :ensure nil
@@ -112,8 +127,12 @@
   :custom
   (recentf-max-saved-items 500)
   (recentf-auto-cleanup 'never)
+  ;; Privileged TRAMP methods are never offered again as recent files.
+  ;; Other remote files are kept; the dashboard and pickers list them without
+  ;; connecting.
   (recentf-exclude
-   '("/tmp/" "/ssh:" "/sudo:" "COMMIT_EDITMSG" "git-rebase-todo"))
+   '("/tmp/" "/ssh:" "[/|]\\(?:sudo\\|su\\|doas\\|sudoedit\\):"
+     "COMMIT_EDITMSG" "git-rebase-todo"))
   :config
   ;; Save periodically, not only on exit.  Waiting for the first interval keeps
   ;; this disk write away from the first picker or automatic LSP startup.
@@ -180,6 +199,7 @@ Restart Emacs after changing early-init.el or package initialization."
 
 ;; A server makes subsequent `emacsclient' invocations effectively instant.
 ;; Batch validation must not leave a background server behind.
+(declare-function server-running-p "server" (&optional name))
 (use-package server
   :ensure nil
   :if (not noninteractive)

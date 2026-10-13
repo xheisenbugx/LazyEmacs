@@ -50,6 +50,9 @@
   ;; Evil Collection covers Dired/Dirvish, Magit, Org Agenda, Consult, Help,
   ;; compilation buffers, and many other non-editing Emacs interfaces.
   (evil-collection-want-unimpaired-p t)
+  ;; Code buffers use LazyVim's gr (LSP references, xref otherwise) from the
+  ;; global Normal map; Evil Collection would rebind it per language mode.
+  (evil-collection-binding-overrides '((find-usages :enabled nil)))
   :config
   (evil-collection-init))
 

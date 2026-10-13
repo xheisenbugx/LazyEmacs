@@ -193,7 +193,7 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 
 (lazyemacs-define-leader-map
  'my/leader-file-prefix
- '(("b" "Buffers" consult-project-buffer)
+ '(("b" "Buffers" lazyemacs-sesh-buffer)
    ("B" "Buffers (all)" consult-buffer)
    ("c" "Private config" my/open-init-file)
    ("d" "Recent directories" consult-dir)
@@ -206,12 +206,12 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
    ("j" "Dired here" dired-jump)
    ("n" "New file" my/new-file)
    ("o" "Open externally" crux-open-with)
-   ("p" "Projects" project-switch-project)
+   ("p" "Projects" lazyemacs-sesh-connect)
    ("r" "Recent" consult-recent-file)
    ("R" "Recent (cwd)" my/recent-files-cwd)
    ("s" "Save" save-buffer)
    ("S" "Save as" write-file)
-   ("t" "Terminal (root)" my/project-ghostel-new)
+   ("t" "Terminal (root)" my/ghostel-toggle)
    ("T" "Terminal (cwd)" my/directory-ghostel)
    ("u" "Sudo edit" sudo-edit)
    ("y" "Copy path" my/copy-buffer-file-name)))
@@ -300,19 +300,20 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
    ("d" "Dired" project-dired)
    ("f" "Find file" project-find-file)
    ("k" "Kill buffers" project-kill-buffers)
-   ("p" "Switch project" project-switch-project)
+   ("p" "Projects and sessions" lazyemacs-sesh-connect)
    ("s" "Search" consult-ripgrep)))
 
 (lazyemacs-define-leader-map
  'my/leader-session-prefix
- '(("d" "Don't save current session" my/session-stop-saving)
+ '(("d" "Don't save current session" lazyemacs-sesh-stop-saving)
    ("f" "Private config" my/open-init-file)
-   ("l" "Restore last session" my/session-restore)
+   ("i" "Import old desktop" lazyemacs-sesh-import-desktop)
+   ("l" "Restore last session" lazyemacs-sesh-restore-last)
    ("p" "Upgrade packages" my/package-upgrade-all)
    ("q" "Quit all" save-buffers-kill-emacs)
    ("r" "Reload module" my/reload-init-file)
-   ("s" "Restore session" my/session-restore)
-   ("S" "Save session" my/session-save)))
+   ("s" "Restore session" lazyemacs-sesh-restore)
+   ("S" "Save session" lazyemacs-sesh-save-all)))
 
 (lazyemacs-define-leader-map
  'my/leader-search-prefix
@@ -407,19 +408,24 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
  'my/leader-workspace-prefix
  '(("<tab>" "New tab" tab-bar-new-tab)
    ("TAB" "New tab" tab-bar-new-tab)
+   ("'" "Last session" lazyemacs-sesh-last)
    ("[" "Previous tab" project-tab-sessions-previous-tab)
    ("]" "Next tab" project-tab-sessions-next-tab)
    ("b" "Pick tab" project-tab-sessions-switch-tab)
-   ("d" "Close tab" tab-bar-close-tab)
+   ("c" "Clone repository" lazyemacs-sesh-clone)
+   ("d" "Detach session" lazyemacs-sesh-detach)
+   ("D" "Kill session" lazyemacs-sesh-kill)
    ("f" "First tab" my/session-first-tab)
-   ("g" "Sessions" my/session-switch)
+   ("g" "Sessions" lazyemacs-sesh-connect)
    ("G" "Move tab to session" tab-bar-change-tab-group)
    ("l" "Last tab" my/session-last-tab)
    ("N" "New named layout" my/session-new-layout)
    ("o" "Close other tabs" my/session-close-other-tabs)
    ("r" "Rename tab" tab-bar-rename-tab)
    ("R" "Layout history forward" tab-bar-history-forward)
-   ("u" "Layout history back" tab-bar-history-back)))
+   ("u" "Layout history back" tab-bar-history-back)
+   ("w" "New worktree session" lazyemacs-sesh-worktree-add)
+   ("x" "Close tab" tab-bar-close-tab)))
 
 (lazyemacs-define-leader-map
  'my/leader-snippet-prefix
@@ -449,6 +455,17 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 (defvar my/leader-workspace-map (symbol-function 'my/leader-workspace-prefix))
 (defvar my/leader-snippet-map (symbol-function 'my/leader-snippet-prefix))
 
+;; LazyVim's `SPC l' opens the Lazy UI, whose own keys update, restore, and
+;; browse extras.  Here they are a leader group; `SPC l l' is the package list.
+(lazyemacs-define-leader-map
+ 'my/leader-package-prefix
+ '(("l" "Packages" list-packages)
+   ("u" "Update packages" lazyemacs-update-packages)
+   ("r" "Restore lockfile" lazyemacs-lock-restore)
+   ("s" "Lockfile status" lazyemacs-lock-status)
+   ("x" "Extras" lazyemacs-extras)))
+(defvar my/leader-package-map (symbol-function 'my/leader-package-prefix))
+
 ;; (KEY DESCRIPTION MAP C-c-ALIAS).  Groups with a nil alias are SPC-only.
 (defconst lazyemacs-leader-groups
   `(("b" "Buffers" ,my/leader-buffer-map "b")
@@ -458,6 +475,7 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
     ("g" "Git" ,my/leader-git-map "g")
     ("h" "Help" ,my/leader-help-map "h")
     ("j" "Jump" ,my/leader-jump-map "j")
+    ("l" "Packages" ,my/leader-package-map "l")
     ("m" "Multiple cursors" ,my/leader-multiple-cursors-map "m")
     ,@(when lazyemacs-enable-mail
         `(("M" "Mail" ,my/leader-mail-map "M")))
@@ -477,7 +495,7 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 
 (defconst lazyemacs-leader-commands
   '(("SPC" "Find files (root)" project-find-file)
-    ("," "Buffers" consult-project-buffer)
+    ("," "Buffers" lazyemacs-sesh-buffer)
     ("/" "Grep (root)" consult-ripgrep)
     (":" "Command history" my/command-history)
     ("." "Toggle scratch" my/scratch-toggle)
@@ -487,7 +505,6 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
     ("?" "Buffer keymaps" which-key-show-full-major-mode)
     ("e" "Explorer (root)" my/project-explorer)
     ("E" "Explorer (cwd)" dirvish-side)
-    ("l" "Packages" list-packages)
     ("L" "LazyEmacs changelog" my/open-changelog)
     ("n" "Notification history" my/messages))
   "Single-key leader commands.")
@@ -525,9 +542,11 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
                        (lambda () (interactive) (project-tab-sessions-select-tab number)))))
 (keymap-global-set "C-<tab>" #'project-tab-sessions-next-tab)
 (keymap-global-set "C-S-<tab>" #'project-tab-sessions-previous-tab)
-(keymap-global-set "C-x t g" #'my/session-switch)
+(keymap-global-set "C-x t g" #'lazyemacs-sesh-connect)
 (keymap-global-set "C-x t P" #'project-tab-sessions-group-from-project)
-(keymap-global-set "s-p" #'my/session-switch)
+(keymap-global-set "s-p" #'lazyemacs-sesh-connect)
+;; macOS binds s-' to cycling frames; s-` still does that.
+(keymap-global-set "s-'" #'lazyemacs-sesh-last)
 (keymap-global-set "s-t" #'tab-bar-new-tab)
 (keymap-global-set "s-r" #'tab-bar-rename-tab)
 (keymap-global-set "s-w" #'tab-bar-close-tab)
@@ -535,9 +554,11 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 ;;; Evil-native navigation
 
 ;; Flash motions also compose with operators and extend Visual selections.
-;; Override Evil Collection's mode-local s/S and character-motion bindings.
+;; They live in Evil's global state maps, like Vim's own motions, so mode-local
+;; Evil Collection keys still win: Magit's s (stage), f (fetch), F (pull) and
+;; t (tag), or Dired's s (sort) and t (toggle marks).
 (general-define-key
- :states '(normal visual motion operator) :keymaps 'override
+ :states '(normal visual motion operator)
  "s" #'flash-evil-jump
  "S" #'flash-treesitter
  "f" #'flash-char-find
@@ -548,36 +569,46 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
  "," #'flash-char-repeat-reverse)
 
 (general-define-key
- :states 'operator :keymaps 'override
+ :states 'operator
  "S" #'my/flash-treesitter-object)
 
+;; Evil Surround's global minor mode claims Operator-pending s/S and Visual S,
+;; which would outrank the global maps above.  LazyVim gives these keys to
+;; Flash (d s jumps, Visual S selects a node) and surrounds with gs*, so do
+;; the same inside Evil Surround's own keymap.
+(defvar evil-surround-mode-map)
+(with-eval-after-load 'evil-surround
+  (evil-define-key* 'operator evil-surround-mode-map
+    "s" #'flash-evil-jump
+    "S" #'my/flash-treesitter-object)
+  (evil-define-key* 'visual evil-surround-mode-map
+    "S" #'flash-treesitter))
+
 ;; High-frequency LazyVim code navigation.  Leader equivalents remain available.
+;; Global Normal-state bindings, so special modes keep their own gr (refresh)
+;; and K.  K is Evil's `evil-lookup', which `evil-lookup-func' points at
+;; `my/show-documentation' (see init-development.el).
 (general-define-key
- :states 'normal :keymaps 'override
+ :states 'normal
  "gd" #'my/lsp-find-definitions
- "gi" nil
  "gI" #'my/lsp-find-implementations
  "gy" #'my/lsp-find-type-definition
  "gD" #'my/lsp-find-declaration
  "gK" #'my/lsp-signature-help
+ ;; Vim's ga (character info) becomes LazyVim's call-hierarchy prefix;
+ ;; `SPC u i' still describes the character at point.
+ "ga" nil
  "gai" #'my/lsp-incoming-calls
  "gao" #'my/lsp-outgoing-calls
  "gr" #'my/lsp-find-references
- "K" #'eldoc-doc-buffer
  "]d" #'flycheck-next-error
  "[d" #'flycheck-previous-error
- "]e" #'my/next-error-diagnostic
- "[e" #'my/previous-error-diagnostic
  "]w" #'my/next-warning-diagnostic
  "[w" #'my/previous-warning-diagnostic
  "]h" #'diff-hl-next-hunk
  "[h" #'diff-hl-previous-hunk
  "]t" #'hl-todo-next
  "[t" #'hl-todo-previous
- "]q" #'next-error
- "[q" #'previous-error
- "]b" #'next-buffer
- "[b" #'previous-buffer
  ;; LazyVim resizes windows with Ctrl+arrows.  macOS may reserve these for
  ;; Mission Control; `SPC w +/-/</>' is the portable alternative.
  "C-<up>" #'evil-window-increase-height
@@ -585,8 +616,21 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
  "C-<left>" #'evil-window-decrease-width
  "C-<right>" #'evil-window-increase-width)
 
-;; mini.surround's gs* keys, as shipped by LazyVim.  Vim-surround's ys/cs/ds
-;; remain available through Evil Surround.
+;; Evil Collection's unimpaired mode is a global minor mode, so its keymap
+;; outranks the global Normal-state map.  Put LazyVim's meaning of the keys
+;; that overlap ([e/]e move text, [q/]q, [b/]b) into that same keymap.
+(defvar evil-collection-unimpaired-mode-map)
+(with-eval-after-load 'evil-collection-unimpaired
+  (evil-define-key* 'normal evil-collection-unimpaired-mode-map
+    "]e" #'my/next-error-diagnostic
+    "[e" #'my/previous-error-diagnostic
+    "]q" #'next-error
+    "[q" #'previous-error
+    "]b" #'next-buffer
+    "[b" #'previous-buffer))
+
+;; mini.surround's gs* keys, as shipped by LazyVim.  Flash owns Operator-pending
+;; s, so Vim-surround's ys/cs/ds are not available.
 (general-define-key
  :states 'normal :keymaps 'override
  "gsa" #'evil-surround-region
@@ -616,28 +660,26 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
  "<" #'my/visual-shift-left
  ">" #'my/visual-shift-right)
 
-;; Ctrl plus a home-row direction moves between windows without requiring the
-;; leader, including while inserting text or typing in a terminal.
+;; Ctrl plus a home-row direction moves between windows from Normal and
+;; Motion state, as in LazyVim.  Insert and Emacs state keep the Emacs meaning
+;; (C-h help, C-k kill line), and terminal input keeps Ghostel's defaults
+;; (C-j/C-k/C-l reach the shell); press Escape first to move away from a
+;; terminal.  Mode-local maps such as Magit's C-j/C-k section motions win.
 (general-define-key
- :states '(normal insert visual motion emacs replace)
- :keymaps 'override
+ :states '(normal motion)
  "C-h" #'windmove-left
  "C-j" #'windmove-down
  "C-k" #'windmove-up
  "C-l" #'windmove-right)
 
-;; Ghostel's char mode overrides even Evil maps to forward keys to the PTY.
-;; Reserve the same window commands in its terminal input maps as well.
-(defvar ghostel-mode-map)
-(defvar ghostel-semi-char-mode-map)
-(defvar ghostel-char-mode-map)
-(with-eval-after-load 'ghostel
-  (dolist (map (list ghostel-mode-map ghostel-semi-char-mode-map
-                     ghostel-char-mode-map))
-    (keymap-set map "C-h" #'windmove-left)
-    (keymap-set map "C-j" #'windmove-down)
-    (keymap-set map "C-k" #'windmove-up)
-    (keymap-set map "C-l" #'windmove-right)))
+;; Buffers in Emacs state (special modes, terminals) cannot use SPC, so M-SPC
+;; opens the same leader there, as Doom Emacs does.  Insert state keeps M-SPC
+;; for Corfu's completion separator and reaches the leader through the C-c
+;; aliases above.
+(general-define-key
+ :states '(normal visual motion emacs)
+ :keymaps 'override
+ "M-SPC" my/leader-map)
 
 ;;; Editing-buffer shortcuts
 
@@ -649,8 +691,8 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
   (kbd "M-j") #'move-text-down
   (kbd "M-k") #'move-text-up)
 (evil-define-minor-mode-key 'normal 'my/editor-shortcuts-mode
-  (kbd "H") #'previous-buffer
-  (kbd "L") #'next-buffer)
+  (kbd "H") #'my/session-previous-buffer
+  (kbd "L") #'my/session-next-buffer)
 
 (defun my/editor-shortcuts-setup ()
   "Enable editing shortcuts only in ordinary editing buffers."

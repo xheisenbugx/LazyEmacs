@@ -13,8 +13,9 @@
 
 (unwind-protect
     (progn
-      (when (version< emacs-version "31.1")
-        (error "LazyEmacs requires Emacs 31.1 or newer (including 31.1 development builds)"))
+      ;; 31.0.90 and later are the 31.1 pretests and release candidates.
+      (when (version< emacs-version "31.0.90")
+        (error "LazyEmacs requires Emacs 31.1 or newer (31.1 pretests 31.0.90+ also work)"))
 
       (defconst lazyemacs-root-directory
         (file-name-directory (or load-file-name user-init-file))
@@ -24,12 +25,18 @@
       (add-to-list 'load-path my/lisp-directory)
       (require 'init-distribution)
       (lazyemacs-load-user-file "early.el")
+      ;; Customize's file is loaded twice.  This early load lets the options
+      ;; read while modules load (such as `lazyemacs-enable-mail') see saved
+      ;; values; the load after the modules below makes saved values win over
+      ;; the defaults that `use-package' :custom sets while modules load.
       (setq custom-file (expand-file-name "custom.el" lazyemacs-user-directory))
       (load custom-file 'noerror 'nomessage)
       (require 'init-packages)
 
       ;; The load order follows dependencies; keymaps come last because they refer to
-      ;; commands defined by all preceding feature modules.
+      ;; commands defined by all preceding feature modules.  A module that fails
+      ;; is reported and skipped so the rest, keymaps included, still load
+      ;; (see `lazyemacs-require-module').
       (dolist (feature '(init-core
                          init-ui
                          init-completion
@@ -44,14 +51,23 @@
                          init-tools
                          init-tasks
                          init-session
+                         init-sesh
                          init-org
                          init-keymaps
                          init-local-actions
                          init-dashboard))
-        (require feature))
+        (lazyemacs-require-module feature))
 
       (when lazyemacs-enable-mail
-        (require 'init-mail))
+        (lazyemacs-require-module 'init-mail))
+      ;; Package lockfile, doctor sections, and opt-in extras (lisp/extras/).
+      ;; Extras load after every module so they can adjust any of them, and
+      ;; before Customize and config.el so private settings have the last word.
+      (lazyemacs-require-module 'init-lock)
+      (lazyemacs-require-module 'init-doctor)
+      (lazyemacs-require-module 'init-extras)
+      (when (fboundp 'lazyemacs-load-extras) (lazyemacs-load-extras))
+      (load custom-file 'noerror 'nomessage)
       (lazyemacs-load-user-file "config.el"))
   (when (fboundp 'my/restore-startup-state)
     (my/restore-startup-state)))

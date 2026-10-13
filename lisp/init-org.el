@@ -34,6 +34,10 @@ beginning of the next line for every other heading, as required by
   :commands (org-agenda org-capture org-store-link)
   :hook
   (org-mode . visual-line-mode)
+  :init
+  ;; Org reads this while loading to build its keymap, so it has no effect
+  ;; once Org is loaded.
+  (setq org-replace-disputed-keys t)
   :custom
   (org-support-shift-select t)
   (org-directory lazyemacs-org-directory)
@@ -63,7 +67,6 @@ beginning of the next line for every other heading, as required by
            1600 1700 1800 1900 2000 2100 2200 2300)
      "" ""))
   :config
-  (setq org-replace-disputed-keys t)
   (make-directory org-directory t)
   (setq org-confirm-babel-evaluate t)
   (setq org-log-done 'time)

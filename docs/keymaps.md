@@ -10,6 +10,8 @@ under [Intentional differences](#intentional-differences).
 - Every leader group also works as <kbd>C-c</kbd> plus the same letter, from any
   state. For example, <kbd>C-c f f</kbd> is <kbd>SPC f f</kbd> while you type in
   Insert state.
+- <kbd>M-SPC</kbd> opens the same leader in special buffers that use Emacs
+  state, where <kbd>SPC</kbd> belongs to the buffer.
 - <kbd>SPC ?</kbd> lists the keys of the current major mode. <kbd>SPC s k</kbd>
   searches every active binding.
 
@@ -32,7 +34,7 @@ under [Intentional differences](#intentional-differences).
 
 | Keys | Action |
 |---|---|
-| <kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd> | Go to the left/lower/upper/right window, also from Insert state and terminals |
+| <kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd> | Go to the left/lower/upper/right window (Normal state) |
 | <kbd>C-Up</kbd> <kbd>C-Down</kbd> <kbd>C-Left</kbd> <kbd>C-Right</kbd> | Resize the window |
 | <kbd>H</kbd> / <kbd>L</kbd>, <kbd>[b</kbd> / <kbd>]b</kbd> | Previous/next buffer |
 | <kbd>M-j</kbd> / <kbd>M-k</kbd> | Move the line or selection down/up |
@@ -51,7 +53,7 @@ under [Intentional differences](#intentional-differences).
 | <kbd>gI</kbd> | Implementations |
 | <kbd>gy</kbd> | Type definition |
 | <kbd>gD</kbd> | Declaration |
-| <kbd>K</kbd> | Documentation |
+| <kbd>K</kbd> | Documentation for the symbol at point (LSP hover, Helpful, or ElDoc) |
 | <kbd>gK</kbd> | Signature help |
 | <kbd>gai</kbd> / <kbd>gao</kbd> | Incoming/outgoing calls |
 | <kbd>]d</kbd> / <kbd>[d</kbd> | Next/previous diagnostic |
@@ -60,8 +62,8 @@ under [Intentional differences](#intentional-differences).
 | <kbd>]q</kbd> / <kbd>[q</kbd> | Next/previous search, compilation, or quickfix result |
 | <kbd>]h</kbd> / <kbd>[h</kbd> | Next/previous Git hunk |
 | <kbd>]t</kbd> / <kbd>[t</kbd> | Next/previous TODO comment |
-| <kbd>]m</kbd> / <kbd>[m</kbd> | Next/previous function start (tree-sitter) |
-| <kbd>za</kbd> | Toggle the fold around point |
+| <kbd>]m</kbd> / <kbd>[m</kbd> | Next/previous function start (tree-sitter, else the mode's defuns) |
+| <kbd>za</kbd> / <kbd>zo</kbd> / <kbd>zc</kbd>, <kbd>zR</kbd> / <kbd>zM</kbd> | Toggle/open/close the fold around point, open/close all |
 | <kbd>C-o</kbd> / <kbd>C-i</kbd> | Jump back/forward, including across LSP jumps |
 
 ## Motions, text objects, and surround
@@ -74,7 +76,6 @@ under [Intentional differences](#intentional-differences).
 | <kbd>gsa</kbd> + motion + char | Add surrounding (mini.surround style) |
 | <kbd>gsd</kbd> + char | Delete surrounding |
 | <kbd>gsr</kbd> + old + new | Replace surrounding |
-| <kbd>ys</kbd> / <kbd>ds</kbd> / <kbd>cs</kbd> | The same, with vim-surround keys |
 | <kbd>gz</kbd> | Multiple cursors prefix (also <kbd>SPC m</kbd>) |
 
 Text objects work after operators (<kbd>d</kbd>, <kbd>c</kbd>, <kbd>y</kbd>) and in
@@ -114,7 +115,6 @@ appears only when `lazyemacs-enable-mail` is set.
 | <kbd>SPC ?</kbd> | Buffer keymaps |
 | <kbd>SPC e</kbd> | Explorer (root) |
 | <kbd>SPC E</kbd> | Explorer (cwd) |
-| <kbd>SPC l</kbd> | Packages |
 | <kbd>SPC L</kbd> | LazyEmacs changelog |
 | <kbd>SPC n</kbd> | Notification history |
 
@@ -253,6 +253,16 @@ appears only when `lazyemacs-enable-mail` is set.
 | <kbd>SPC j o</kbd> | Outline |
 | <kbd>SPC j w</kbd> | Word (avy) |
 
+### <kbd>SPC l</kbd> Packages (also <kbd>C-c l</kbd>)
+
+| Keys | Action |
+|---|---|
+| <kbd>SPC l l</kbd> | Packages |
+| <kbd>SPC l u</kbd> | Update packages |
+| <kbd>SPC l r</kbd> | Restore lockfile |
+| <kbd>SPC l s</kbd> | Lockfile status |
+| <kbd>SPC l x</kbd> | Extras |
+
 ### <kbd>SPC m</kbd> Multiple cursors (also <kbd>C-c m</kbd>)
 
 | Keys | Action |
@@ -283,7 +293,7 @@ appears only when `lazyemacs-enable-mail` is set.
 | <kbd>SPC p d</kbd> | Dired |
 | <kbd>SPC p f</kbd> | Find file |
 | <kbd>SPC p k</kbd> | Kill buffers |
-| <kbd>SPC p p</kbd> | Switch project |
+| <kbd>SPC p p</kbd> | Projects and sessions |
 | <kbd>SPC p s</kbd> | Search |
 
 ### <kbd>SPC q</kbd> Quit/Session (also <kbd>C-c q</kbd>)
@@ -292,6 +302,7 @@ appears only when `lazyemacs-enable-mail` is set.
 |---|---|
 | <kbd>SPC q d</kbd> | Don't save current session |
 | <kbd>SPC q f</kbd> | Private config |
+| <kbd>SPC q i</kbd> | Import old desktop |
 | <kbd>SPC q l</kbd> | Restore last session |
 | <kbd>SPC q p</kbd> | Upgrade packages |
 | <kbd>SPC q q</kbd> | Quit all |
@@ -418,10 +429,13 @@ appears only when `lazyemacs-enable-mail` is set.
 | Keys | Action |
 |---|---|
 | <kbd>SPC TAB TAB</kbd> | New tab |
+| <kbd>SPC TAB '</kbd> | Last session |
 | <kbd>SPC TAB [</kbd> | Previous tab |
 | <kbd>SPC TAB ]</kbd> | Next tab |
 | <kbd>SPC TAB b</kbd> | Pick tab |
-| <kbd>SPC TAB d</kbd> | Close tab |
+| <kbd>SPC TAB c</kbd> | Clone repository |
+| <kbd>SPC TAB d</kbd> | Detach session |
+| <kbd>SPC TAB D</kbd> | Kill session |
 | <kbd>SPC TAB f</kbd> | First tab |
 | <kbd>SPC TAB g</kbd> | Sessions |
 | <kbd>SPC TAB G</kbd> | Move tab to session |
@@ -431,6 +445,8 @@ appears only when `lazyemacs-enable-mail` is set.
 | <kbd>SPC TAB r</kbd> | Rename tab |
 | <kbd>SPC TAB R</kbd> | Layout history forward |
 | <kbd>SPC TAB u</kbd> | Layout history back |
+| <kbd>SPC TAB w</kbd> | New worktree session |
+| <kbd>SPC TAB x</kbd> | Close tab |
 <!-- END GENERATED LEADER -->
 
 <kbd>SPC w</kbd> inherits every key of Vim's <kbd>CTRL-W</kbd> map, as LazyVim
@@ -482,14 +498,26 @@ Standard Emacs keys keep working and use the richer pickers:
 These are deliberate, usually because Emacs already owns the key or has a
 better native tool:
 
-- **<kbd>C-h/j/k/l</kbd> always move between windows**, even in Insert state
-  and terminals. LazyVim's Insert-state <kbd>C-k</kbd> signature help is on
-  <kbd>gK</kbd>.
-- **Sessions persist automatically.** Emacs saves the desktop (files, cursor
-  positions, tab groups, layouts) on exit. <kbd>SPC q s</kbd>/<kbd>SPC q l</kbd>
-  restore it, <kbd>SPC q d</kbd> stops saving, and <kbd>SPC q S</kbd> saves
+- **Mode keys come first.** The keys above are global Evil bindings, so Magit,
+  Dired, and other special modes keep their own <kbd>s</kbd>, <kbd>f</kbd>,
+  <kbd>t</kbd>, <kbd>gr</kbd>, <kbd>K</kbd>, and <kbd>C-j</kbd>/<kbd>C-k</kbd>.
+- **<kbd>C-h/j/k/l</kbd> move between windows in Normal state only**, as in
+  LazyVim. While typing, <kbd>C-h</kbd> is Emacs's help prefix and terminals
+  keep these keys; press <kbd>Esc</kbd> first. LazyVim's Insert-state
+  <kbd>C-k</kbd> signature help is on <kbd>gK</kbd>.
+- **Flash owns Operator-pending <kbd>s</kbd>**, so vim-surround's
+  <kbd>ys</kbd>/<kbd>ds</kbd>/<kbd>cs</kbd> are not available; use the
+  <kbd>gs</kbd> surround keys, as LazyVim does.
+- **Sessions persist automatically, one file each.** Sessions are saved on
+  switch, detach, idle, and exit, and the ones open at exit reopen at startup.
+  <kbd>SPC q s</kbd> reopens them, <kbd>SPC q l</kbd> reopens the last closed
+  session, <kbd>SPC q d</kbd> stops saving, and <kbd>SPC q S</kbd> saves
   immediately. Running processes are never restored; saved terminals come
   back as placeholders where <kbd>RET</kbd> starts a fresh shell.
+- **<kbd>SPC TAB d</kbd> detaches the session** (sesh-style) and
+  <kbd>SPC TAB D</kbd> kills it; <kbd>SPC TAB x</kbd> closes a single tab.
+  <kbd>SPC p p</kbd> and <kbd>SPC f p</kbd> open the session picker, which also
+  lists projects.
 - **Diagnostics use pickers instead of a Trouble panel.** <kbd>SPC x x</kbd> and
   <kbd>SPC x X</kbd> open searchable, previewing lists.
 - **Git uses Magit** where LazyVim uses lazygit. <kbd>SPC g g</kbd> opens it.

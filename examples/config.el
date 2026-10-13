@@ -20,6 +20,13 @@
 ;; Start a language server automatically for another language.
 ;; (add-hook 'java-ts-mode-hook #'my/lsp-start)
 
+;; Declare a session to build with s-p (see docs/workflows.md, "Declaring sessions").
+;; (lazyemacs-define-session "api"
+;;   :root "~/Workspace/api"
+;;   :layouts '(("code" :file "README.md")
+;;              ("server" :file "src/main.go" :terminal "go run .")
+;;              ("files" :dired ".")))
+
 ;; (keymap-global-set "<f5>" #'recompile)
 ;; (with-eval-after-load 'mu4e
 ;;   (setq mu4e-sent-folder "/Sent"

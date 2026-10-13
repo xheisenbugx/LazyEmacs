@@ -72,6 +72,41 @@ No grammars are downloaded automatically.  Restart after changing this option."
     (when (file-exists-p file)
       (load file nil 'nomessage))))
 
+(defvar lazyemacs-failed-modules nil
+  "Modules that failed to load at startup, as (FEATURE . ERROR) entries.")
+
+(defvar lazyemacs-strict-modules
+  (or noninteractive (and (getenv "LAZYEMACS_STRICT") t))
+  "Non-nil makes a module load error abort startup instead of being skipped.
+Batch runs (tests, bootstrap, CI) are strict so failures stay loud; set the
+LAZYEMACS_STRICT environment variable to get the same in a normal session.
+Starting Emacs with --debug-init also stops at the error.")
+
+(defun lazyemacs-require-module (feature)
+  "Load module FEATURE; report a failure and continue unless strict.
+Failures are recorded in `lazyemacs-failed-modules', shown as a warning and
+listed by the dashboard and `lazyemacs-doctor'."
+  (if lazyemacs-strict-modules
+      (require feature)
+    ;; `condition-case-unless-debug' still enters the debugger under
+    ;; --debug-init, where the backtrace is the point.
+    (condition-case-unless-debug err
+        (require feature)
+      (error
+       (push (cons feature err) lazyemacs-failed-modules)
+       (display-warning
+        'lazyemacs
+        (format "Module %s failed to load and was skipped: %s
+Restart with --debug-init for a backtrace; SPC h D lists failed modules."
+                feature (error-message-string err))
+        :error)
+       nil))))
+
+(defvar lazyemacs-doctor-sections nil
+  "Functions that print additional sections of `lazyemacs-doctor'.
+Each is called with `standard-output' directed at the report and must not
+launch processes or install anything.  Add them with `add-hook'.")
+
 (defun lazyemacs-doctor ()
   "Display a read-only environment report; never install or run external tools."
   (interactive)
@@ -87,6 +122,13 @@ No grammars are downloaded automatically.  Restart after changing this option."
       (princ (format "Package network: %s\nCurrent mode: %s\nLSP attached here: %s\n"
                      (if lazyemacs-offline "offline" "allowed for installation/updates")
                      mode (if managed "yes" "no")))
+      (princ (format "Failed modules: %s\n"
+                     (if lazyemacs-failed-modules
+                         (mapconcat (lambda (entry)
+                                      (format "%s (%s)" (car entry)
+                                              (error-message-string (cdr entry))))
+                                    (reverse lazyemacs-failed-modules) "; ")
+                       "none")))
       (princ "\nTools (missing tools affect only the named feature)\n")
       (dolist (entry (append
                       '(("git" . "projects and Git") ("rg" . "project text search")
@@ -105,6 +147,7 @@ No grammars are downloaded automatically.  Restart after changing this option."
                         ("docker-langserver" . "Dockerfile LSP")
                         ("lua-language-server" . "Lua LSP")
                         ("bash-language-server" . "Bash LSP")
+                        ("shellcheck" . "shell diagnostics without the Bash LSP")
                         ("emacs-lsp-booster" . "optional buffered JSON transport")
                         ("debugpy-adapter" . "Python debugging (pip install debugpy)")
                         ("dlv" . "Go debugging")
@@ -130,7 +173,8 @@ No grammars are downloaded automatically.  Restart after changing this option."
         (dolist (entry (sort (copy-sequence package-alist)
                             (lambda (a b) (string< (symbol-name (car a)) (symbol-name (car b))))))
           (princ (format "%-30s %s\n" (car entry)
-                         (package-version-join (package-desc-version (cadr entry))))))))))
+                         (package-version-join (package-desc-version (cadr entry)))))))
+      (run-hooks 'lazyemacs-doctor-sections))))
 
 (make-directory lazyemacs-user-directory t)
 (provide 'init-distribution)

@@ -29,7 +29,8 @@
 (electric-pair-mode 1)
 (show-paren-mode 1)
 (repeat-mode 1)
-(global-subword-mode 1)
+;; Subword movement is off so Evil's w, b and e treat fooBarBaz as one word,
+;; as Vim does.  Enable it in user/config.el with (global-subword-mode 1).
 
 (setq show-paren-delay 0.1
       show-paren-when-point-inside-paren t
@@ -107,16 +108,40 @@
       (unless (or (string-empty-p text) (equal text (car kill-ring)))
         text))))
 
+;; The interprogram functions are global, but one Emacs can have graphical
+;; and terminal frames at once (a daemon with emacsclient -c and -t).  Decide
+;; per call from the selected frame instead of once at startup.
+(defvar my/clipboard-default-cut-function #'gui-select-text
+  "Clipboard writer that graphical frames keep using.")
+(defvar my/clipboard-default-paste-function #'gui-selection-value
+  "Clipboard reader that graphical frames keep using.")
+
+(defun my/clipboard-terminal-frame-p ()
+  "Return non-nil when the selected frame needs external clipboard tools."
+  (and (not (display-graphic-p))
+       (my/clipboard-command my/clipboard-commands)))
+
+(defun my/clipboard-cut (text)
+  "Send TEXT to the clipboard of the selected frame's display."
+  (if (my/clipboard-terminal-frame-p)
+      (my/clipboard-copy text)
+    (when my/clipboard-default-cut-function
+      (funcall my/clipboard-default-cut-function text))))
+
+(defun my/clipboard-yank ()
+  "Read the clipboard of the selected frame's display."
+  (if (my/clipboard-terminal-frame-p)
+      (my/clipboard-paste)
+    (when my/clipboard-default-paste-function
+      (funcall my/clipboard-default-paste-function))))
+
 (defun my/clipboard-setup-terminal ()
-  "Share the kill ring with the system clipboard in terminal-only sessions.
-Daemons are skipped: their graphical frames use the native clipboard."
-  (when (and (not (display-graphic-p))
-             (not (daemonp))
-             (not noninteractive)
-             (not (eq system-type 'windows-nt))
-             (my/clipboard-command my/clipboard-commands))
-    (setq interprogram-cut-function #'my/clipboard-copy
-          interprogram-paste-function #'my/clipboard-paste)))
+  "Share the kill ring with the system clipboard in terminal frames.
+Graphical frames, including daemon frames, keep the native clipboard."
+  (when (and (not noninteractive)
+             (not (eq system-type 'windows-nt)))
+    (setq interprogram-cut-function #'my/clipboard-cut
+          interprogram-paste-function #'my/clipboard-yank)))
 
 (my/clipboard-setup-terminal)
 

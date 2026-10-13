@@ -116,11 +116,13 @@
      ("TEST" . "#94e2d5"))))
 
 ;; Indent guides, like LazyVim's snacks.indent.  Toggle with `SPC u g'.
-;; Terminal frames draw the guides with characters instead of stipples.
+;; indent-bars itself draws character guides when a buffer is set up in a
+;; terminal frame and stipples in a graphical one.  Leave
+;; `indent-bars-prefer-character' alone: deciding once at startup gave a
+;; daemon's graphical frames character guides.
 (use-package indent-bars
   :hook ((prog-mode yaml-mode yaml-ts-mode) . indent-bars-mode)
   :custom
-  (indent-bars-prefer-character (not (display-graphic-p)))
   (indent-bars-color '(highlight :face-bg t :blend 0.25))
   (indent-bars-highlight-current-depth '(:blend 0.6))
   (indent-bars-width-frac 0.15)
