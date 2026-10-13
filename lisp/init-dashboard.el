@@ -103,6 +103,13 @@
       (lazyemacs-dashboard--insert-centered "L A Z Y E M A C S" width 'lazyemacs-dashboard-logo))
     (insert "\n")
     (lazyemacs-dashboard--insert-centered "Evil Emacs, the LazyVim way" width 'shadow)
+    (when lazyemacs-failed-modules
+      (insert "\n")
+      (lazyemacs-dashboard--insert-centered
+       (format "Failed to load: %s  (SPC h D for details)"
+               (mapconcat (lambda (entry) (symbol-name (car entry)))
+                          (reverse lazyemacs-failed-modules) ", "))
+       width 'error))
     (insert "\n\n")
     (pcase-dolist (`(,key ,label ,command) lazyemacs-dashboard-actions)
       (insert (make-string indent ?\s))

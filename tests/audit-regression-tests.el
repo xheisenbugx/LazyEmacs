@@ -114,5 +114,68 @@
     (let ((corfu--index 0))
       (should (eq (key-binding (kbd "RET")) #'corfu-insert)))))
 
+;;; Startup robustness
+
+(ert-deftest my/audit-failed-module-is-reported-and-skipped ()
+  (let* ((directory (make-temp-file "lazyemacs-audit-modules-" t))
+         (load-path (cons directory load-path))
+         (lazyemacs-strict-modules nil)
+         (lazyemacs-failed-modules nil)
+         (debug-on-error nil)
+         warnings)
+    (unwind-protect
+        (progn
+          (with-temp-file (expand-file-name "lazyemacs-audit-broken.el" directory)
+            (insert ";;; -*- lexical-binding: t; -*-\n(error \"broken module\")\n"))
+          (with-temp-file (expand-file-name "lazyemacs-audit-fine.el" directory)
+            (insert ";;; -*- lexical-binding: t; -*-\n(provide 'lazyemacs-audit-fine)\n"))
+          (cl-letf (((symbol-function 'display-warning)
+                     (lambda (&rest args) (push args warnings))))
+            (should-not (lazyemacs-require-module 'lazyemacs-audit-broken))
+            (should (lazyemacs-require-module 'lazyemacs-audit-fine)))
+          (should (equal (mapcar #'car lazyemacs-failed-modules) '(lazyemacs-audit-broken)))
+          (should (= 1 (length warnings)))
+          (let ((recentf-list nil))
+            (with-current-buffer (lazyemacs-dashboard-buffer)
+              (unwind-protect
+                  (should (string-match-p "Failed to load: lazyemacs-audit-broken" (buffer-string)))
+                (kill-buffer))))
+          (lazyemacs-doctor)
+          (with-current-buffer "*LazyEmacs Doctor*"
+            (should (string-match-p "Failed modules: lazyemacs-audit-broken" (buffer-string))))
+          ;; Batch runs stay strict, so CI and tests still fail loudly.
+          (let ((lazyemacs-strict-modules t))
+            (should-error (lazyemacs-require-module 'lazyemacs-audit-broken))))
+      (delete-directory directory t))))
+
+(defun my/audit-run-init (user-directory form)
+  "Start a disposable Emacs using USER-DIRECTORY, evaluate FORM, return output."
+  (let ((process-environment
+         (append (list (concat "LAZYEMACS_USER_DIR=" user-directory) "LAZYEMACS_OFFLINE=1")
+                 process-environment))
+        (root lazyemacs-root-directory))
+    (with-temp-buffer
+      (call-process
+       (expand-file-name invocation-name invocation-directory) nil t nil
+       "-Q" "--batch"
+       "--eval" (prin1-to-string
+                 `(setq user-emacs-directory ,(file-name-as-directory user-directory)
+                        package-user-dir ,(expand-file-name "elpa" root)))
+       "--load" (expand-file-name "early-init.el" root)
+       "--load" (expand-file-name "init.el" root)
+       "--eval" (prin1-to-string `(princ (format "RESULT:%S" ,form))))
+      (goto-char (point-min))
+      (and (re-search-forward "RESULT:\\(.*\\)" nil t) (read (match-string 1))))))
+
+(ert-deftest my/audit-customize-wins-over-module-defaults ()
+  ;; init-completion sets corfu-cycle to t with use-package :custom.
+  (let ((directory (make-temp-file "lazyemacs-audit-custom-" t)))
+    (unwind-protect
+        (progn
+          (with-temp-file (expand-file-name "custom.el" directory)
+            (insert ";;; -*- lexical-binding: t; -*-\n(custom-set-variables '(corfu-cycle nil))\n"))
+          (should (equal (my/audit-run-init directory '(list :cycle corfu-cycle)) '(:cycle nil))))
+      (delete-directory directory t))))
+
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "my/audit-")
