@@ -7,6 +7,8 @@ LazyEmacs keeps your settings apart from the distribution, like LazyVim's
 - [Your files](#your-files)
 - [Options](#options)
 - [Recipes](#recipes)
+- [Extras](#extras)
+- [Package lockfile](#package-lockfile)
 - [Mail](#mail)
 - [How startup works](#how-startup-works)
 - [State, backups, and privacy](#state-backups-and-privacy)
@@ -26,6 +28,7 @@ cp -n examples/config.el user/config.el
 | `user/early.el` | Before packages and modules | `lazyemacs-*` options, fonts, theme, feature switches |
 | `user/custom.el` | Right after `early.el` | Settings saved through `M-x customize` |
 | `user/config.el` | Last | Keys, hooks, extra packages, overrides |
+| `user/extras.eld` | Written by `M-x lazyemacs-extras` | The [extras](#extras) you enabled (data, not code) |
 
 <kbd>SPC f c</kbd> opens `config.el`. Everything under `user/` is ignored by Git.
 To keep these files elsewhere (for example in a dotfiles repository), set
@@ -47,6 +50,8 @@ Set these in `user/early.el` and restart:
 | `lazyemacs-enable-recovery` | `t` | Backups and auto-save files under `var/` |
 | `lazyemacs-enable-mail` | `nil` | Load mu4e and the <kbd>SPC M</kbd> menu |
 | `lazyemacs-org-directory` | `~/org/` | Agenda and capture files |
+| `lazyemacs-extras` | `nil` | [Extras](#extras) to load, in addition to `user/extras.eld` |
+| `lazyemacs-lock-file` | `lazyemacs-lock.eld` in the distribution | The [package lockfile](#package-lockfile) |
 | `lazyemacs-offline` | `nil` (`t` with `LAZYEMACS_OFFLINE=1`) | Never download or update packages |
 | `my/lsp-visual-extras` | `nil` | Breadcrumbs, highlights, inlay hints, code lenses |
 | `my/lsp-diagnostics-enabled` | `t` | Diagnostics when a server attaches |
@@ -85,7 +90,8 @@ All of these go in `user/config.el`.
 (add-hook 'java-ts-mode-hook #'my/lsp-start)
 ```
 
-**Format on save everywhere from startup:**
+**Format on save everywhere from startup:** enable the `coding-format-on-save`
+[extra](#extras), or:
 
 ```elisp
 (apheleia-global-mode 1)
@@ -106,6 +112,61 @@ example to choose a formatter or add tasks:
 ((nil . ((apheleia-formatter . prettier)
          (my/project-tasks . (("dev" . "npm run dev"))))))
 ```
+
+## Extras
+
+Extras are optional bundles that LazyEmacs ships but does not turn on, like
+LazyVim's LazyExtras. Run `M-x lazyemacs-extras` (also <kbd>SPC l x</kbd>, or
+<kbd>x</kbd> on the dashboard): it lists every extra with its description and
+state. Press <kbd>x</kbd> or <kbd>RET</kbd> to toggle the extra on that line and
+<kbd>o</kbd> to read its source.
+
+| Extra | Effect |
+|---|---|
+| `coding-format-on-save` | Format every file on save with Apheleia (<kbd>SPC u f</kbd>/<kbd>SPC u F</kbd> still toggle it) |
+| `editor-subword` | CamelCase-aware word motions: `w`, `b`, `e`, and `M-f` stop inside `fooBarBaz` |
+| `ui-relative-numbers` | Relative line numbers, as in LazyVim |
+| `ui-zen` | Zen mode on <kbd>SPC u z</kbd>: centered text without line numbers or mode line |
+| `lang-clangd` | C and C++: native modes, `c`/`cpp` grammars for <kbd>SPC h T</kbd>, clangd when installed |
+
+Enabling an extra loads it immediately; disabling one takes effect after a
+restart. Your selection is saved as data in `user/extras.eld`. To keep it with
+the rest of your configuration instead, list extras in `user/early.el`:
+
+```elisp
+(setq lazyemacs-extras '(editor-subword ui-relative-numbers))
+```
+
+Both sources are combined; extras named in `early.el` can only be removed
+there. Extras load after every LazyEmacs module and before `user/config.el`,
+so `config.el` can still override them. An extra that fails to load is
+reported in `*Warnings*` and the doctor (<kbd>SPC h D</kbd>) without stopping
+startup. Each extra is one small file in `lisp/extras/`; its first line is the
+description shown in the list.
+
+## Package lockfile
+
+`lazyemacs-lock.eld` at the root of the distribution plays the role of
+lazy.nvim's `lazy-lock.json`. It is readable Lisp data, one package per line,
+sorted by name: the version and archive of each package, and for packages
+installed from Git the repository and exact commit. Commit it to make an
+installation reproducible.
+
+| Key | Command | Does |
+|---|---|---|
+| <kbd>SPC l l</kbd> | `list-packages` | Browse, install, and delete packages |
+| <kbd>SPC l u</kbd> | `lazyemacs-update-packages` | Upgrade every package, show the differences, and offer to update the lockfile |
+| <kbd>SPC l s</kbd> | `lazyemacs-lock-status` | Compare installed packages with the lockfile (`w` records, `r` restores, `g` refreshes) |
+| <kbd>SPC l r</kbd> | `lazyemacs-lock-restore` | Return Git packages to their locked commits and install missing ones |
+| — | `lazyemacs-lock-write` | Record the installed packages now |
+
+Nothing is written without your confirmation. Restore shows its plan and asks
+first. Archives keep only their newest release, so archive packages that
+differ from the lockfile are listed and kept as installed rather than silently
+downgraded or replaced. Restore needs the network and refuses to run with
+`LAZYEMACS_OFFLINE=1`. Packages installed from your own checkout
+(`package-vc-install-from-checkout`) are never moved; check the commit out
+there yourself.
 
 ## Mail
 
@@ -149,6 +210,8 @@ init.el                  checks Emacs ≥ 31.1, then loads in order:
   init-keymaps           the leader, Evil keys, C-c aliases
   init-dashboard         start screen
   init-mail              only with lazyemacs-enable-mail
+  init-lock, init-doctor package lockfile, extra doctor sections
+  init-extras            enabled extras from lisp/extras/
   user/config.el         your overrides
 ```
 
@@ -172,6 +235,9 @@ init.el                  checks Emacs ≥ 31.1, then loads in order:
 | `init-session` | Desktop save/restore, zoom |
 | `init-org` | Org, agenda, capture |
 | `init-local-actions` | Backslash actions in result buffers |
+| `init-lock` | Package lockfile: status, update, restore |
+| `init-doctor` | Doctor sections: failed modules, language tooling, session locks |
+| `init-extras` | The extras list and loader |
 
 Packages are byte-compiled but never native-compiled in the background, which
 keeps the editor responsive while packages install or update.
