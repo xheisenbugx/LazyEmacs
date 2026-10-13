@@ -84,10 +84,11 @@ When TOGGLE is non-nil, hide an already visible pane without killing it."
                                  (project-root project) default-directory)))
       (my/terminal-create "*eshell:project*" nil))))
 
-(defun my/ghostel-toggle ()
-  "Show or hide this tab's project terminal without stopping its shell."
-  (interactive)
-  (my/ghostel-pane nil nil t))
+(defun my/ghostel-toggle (&optional fresh)
+  "Show or hide this tab's project terminal without stopping its shell.
+With prefix FRESH, show a new shell instead, as `my/project-ghostel' does."
+  (interactive "P")
+  (my/ghostel-pane fresh nil (not fresh)))
 
 (use-package ghostel
   :commands (ghostel ghostel-create ghostel-project)

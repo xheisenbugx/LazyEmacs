@@ -559,6 +559,29 @@ this Emacs session.  Use Customize to persist the choice across restarts."
   (let ((flycheck-display-errors-function #'flycheck-display-error-messages))
     (flycheck-display-error-at-point)))
 
+(defun my/show-documentation ()
+  "Show documentation for the symbol at point now, like LazyVim's K.
+Attached language servers answer a hover request, Emacs Lisp uses Helpful,
+and every other buffer asks ElDoc afresh instead of redisplaying its last
+result."
+  (interactive)
+  (cond
+   ((and (bound-and-true-p lsp-managed-mode)
+         (lsp-feature? "textDocument/hover"))
+    (lsp-describe-thing-at-point))
+   ((derived-mode-p 'emacs-lisp-mode 'lisp-interaction-mode 'lisp-data-mode)
+    (let ((symbol (symbol-at-point)))
+      (unless symbol (user-error "No symbol at point"))
+      (if (require 'helpful nil t) (helpful-symbol symbol) (describe-symbol symbol))))
+   ;; An interactive request bypasses ElDoc's "same position" cache and its
+   ;; buffer display function pops up the result.
+   (t (eldoc-print-current-symbol-info t))))
+
+;; Evil's K runs `evil-lookup'; pointing it here keeps K an ordinary Evil
+;; binding that mode-local maps (Magit, Dired) can still override.
+(with-eval-after-load 'evil
+  (setq evil-lookup-func #'my/show-documentation))
+
 (use-package flycheck
   :commands
   (flycheck-list-errors flycheck-next-error flycheck-previous-error)

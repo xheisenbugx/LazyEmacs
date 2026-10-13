@@ -12,7 +12,7 @@
     (evil-normal-state)
     (dolist (pair '(("H" . previous-buffer) ("L" . next-buffer)
                     ("gi" . evil-insert-resume) ("gI" . my/lsp-find-implementations)
-                    ("SPC f t" . my/project-ghostel-new) ("SPC f T" . my/directory-ghostel)
+                    ("SPC f t" . my/ghostel-toggle) ("SPC f T" . my/directory-ghostel)
                     ("SPC f p" . project-switch-project) ("SPC c d" . my/show-diagnostic-at-point)
                     ("SPC c R" . crux-rename-file-and-buffer) ("SPC g s" . magit-status)
                     ("SPC g h s" . diff-hl-stage-current-hunk)
@@ -21,14 +21,22 @@
                     ("SPC s r" . my/search-replace) ("SPC u f" . my/toggle-global-format-on-save)
                     ("SPC u F" . my/toggle-format-on-save)))
       (should (eq (key-binding (kbd (car pair))) (cdr pair)))))
-  (dolist (state '(normal insert visual motion emacs replace))
+  ;; LazyVim moves between windows with Ctrl+hjkl in Normal mode only.
+  (dolist (state '(normal motion))
     (with-temp-buffer
       (emacs-lisp-mode)
       (evil-local-mode 1)
       (evil-change-state state)
       (dolist (pair '(("C-h" . windmove-left) ("C-j" . windmove-down)
                       ("C-k" . windmove-up) ("C-l" . windmove-right)))
-        (should (eq (key-binding (kbd (car pair))) (cdr pair)))))))
+        (should (eq (key-binding (kbd (car pair))) (cdr pair))))))
+  (dolist (state '(insert emacs))
+    (with-temp-buffer
+      (emacs-lisp-mode)
+      (evil-local-mode 1)
+      (evil-change-state state)
+      (should (eq (key-binding (kbd "C-h")) 'help-command))
+      (should (eq (key-binding (kbd "C-h f")) #'helpful-callable)))))
 
 (ert-deftest my/lazyvim-save-and-move-are-editing-only ()
   (dolist (state '(normal insert visual replace))
@@ -45,9 +53,10 @@
     (setq major-mode 'ghostel-mode)
     (my/editor-shortcuts-setup)
     (should-not my/editor-shortcuts-mode))
+  ;; Terminal input keeps Ghostel's own C-h/C-k handling.
   (dolist (map (list ghostel-mode-map ghostel-char-mode-map ghostel-semi-char-mode-map))
-    (should (eq (lookup-key map (kbd "C-h")) #'windmove-left))
-    (should (eq (lookup-key map (kbd "C-k")) #'windmove-up))
+    (should-not (eq (lookup-key map (kbd "C-h")) #'windmove-left))
+    (should-not (eq (lookup-key map (kbd "C-k")) #'windmove-up))
     (should (eq (lookup-key map (kbd "C-/")) #'my/ghostel-toggle))))
 
 (ert-deftest my/lazyvim-terminal-reuse-fresh-cwd-and-hide ()
