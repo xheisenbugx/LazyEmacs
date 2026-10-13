@@ -142,6 +142,7 @@ Restart with --debug-init for a backtrace; SPC h D lists failed modules."
                         ("docker-langserver" . "Dockerfile LSP")
                         ("lua-language-server" . "Lua LSP")
                         ("bash-language-server" . "Bash LSP")
+                        ("shellcheck" . "shell diagnostics without the Bash LSP")
                         ("emacs-lsp-booster" . "optional buffered JSON transport")
                         ("debugpy-adapter" . "Python debugging (pip install debugpy)")
                         ("dlv" . "Go debugging")

@@ -92,6 +92,7 @@
   (with-temp-buffer
     (let ((apheleia-mode nil) seen)
       (cl-letf (((symbol-function 'my/project-formatter) #'ignore)
+                ((symbol-function 'my/formatter-available-p) (lambda (_) t))
                 ((symbol-function 'apheleia--get-formatters) (lambda (&rest _) '(prettier)))
                 ((symbol-function 'apheleia-format-buffer) (lambda (formatters &rest _) (setq seen formatters))))
         (my/format-buffer)

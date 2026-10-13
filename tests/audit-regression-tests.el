@@ -295,5 +295,52 @@
     (my/previous-function 1)
     (should (bobp))))
 
+;;; Formatting, language servers and diagnostics
+
+(ert-deftest my/audit-missing-formatter-falls-back-to-lsp-or-indent ()
+  (require 'apheleia)
+  (let ((apheleia-formatters (cons '(lazyemacs-fake . ("lazyemacs-no-such-formatter" "-"))
+                                   apheleia-formatters)))
+    (should-not (my/formatter-available-p 'lazyemacs-fake))
+    (should (my/formatter-available-p 'lisp-indent))
+    (with-temp-buffer
+      (let ((lsp-managed-mode t) lsp-formatted indented)
+        (cl-letf (((symbol-function 'my/project-formatter) #'ignore)
+                  ((symbol-function 'apheleia--get-formatters) (lambda (&rest _) '(lazyemacs-fake)))
+                  ((symbol-function 'apheleia-format-buffer) (lambda (&rest _) (ert-fail "Ran a missing formatter")))
+                  ((symbol-function 'lsp-feature?) (lambda (_) t))
+                  ((symbol-function 'lsp-format-buffer) (lambda () (setq lsp-formatted t)))
+                  ((symbol-function 'indent-region) (lambda (&rest _) (setq indented t))))
+          (my/format-buffer)
+          (should lsp-formatted)
+          (setq lsp-managed-mode nil)
+          (my/format-buffer)
+          (should indented))))))
+
+(ert-deftest my/audit-json-without-grammar-uses-the-json-server ()
+  (with-temp-buffer
+    (delay-mode-hooks (js-json-mode))
+    (cl-letf (((symbol-function 'executable-find)
+               (lambda (name &rest _) (and (equal name "vscode-json-language-server") "/bin/json"))))
+      (should (equal (my/language-server-available-p) "/bin/json"))))
+  (should (memq #'my/lsp-ensure js-json-mode-hook)))
+
+(ert-deftest my/audit-flycheck-for-elisp-files-without-checkdoc ()
+  (require 'flycheck)
+  (should (memq 'emacs-lisp-checkdoc flycheck-disabled-checkers))
+  (let ((directory (make-temp-file "lazyemacs-audit-elisp-" t)))
+    (unwind-protect
+        (with-temp-buffer
+          (setq buffer-file-name (expand-file-name "config.el" directory))
+          (cl-letf (((symbol-function 'flycheck-buffer) #'ignore))
+            (emacs-lisp-mode)
+            (should flycheck-mode))
+          (set-buffer-modified-p nil)
+          (setq buffer-file-name nil))
+      (delete-directory directory t)))
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (should-not (bound-and-true-p flycheck-mode))))
+
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "my/audit-")

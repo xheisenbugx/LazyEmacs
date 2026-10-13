@@ -132,6 +132,10 @@ servers installed by the system package manager."
 This guard prevents lsp-mode from prompting or emitting an error every time a
 language without an installed server is opened."
   (cond
+   ;; Before the JavaScript test: the built-in `js-json-mode' (used when no
+   ;; JSON grammar is installed) derives from `js-mode'.
+   ((derived-mode-p 'json-mode 'json-ts-mode 'js-json-mode)
+    (my/executable-find-any "vscode-json-language-server"))
    ((derived-mode-p 'typescript-mode 'typescript-ts-mode 'tsx-ts-mode
                     'js-mode 'js-ts-mode 'jsx-ts-mode)
     (my/executable-find-any "typescript-language-server"))
@@ -142,8 +146,6 @@ language without an installed server is opened."
     (my/executable-find-any "gopls"))
    ((derived-mode-p 'rust-mode 'rust-ts-mode)
     (my/executable-find-any "rust-analyzer"))
-   ((derived-mode-p 'json-mode 'json-ts-mode)
-    (my/executable-find-any "vscode-json-language-server"))
    ((derived-mode-p 'css-mode 'css-ts-mode)
     (my/executable-find-any "vscode-css-language-server"))
    ((derived-mode-p 'html-mode 'html-ts-mode)
@@ -541,7 +543,9 @@ this Emacs session.  Use Customize to persist the choice across restarts."
                 typescript-mode-hook typescript-ts-mode-hook tsx-ts-mode-hook
                 go-mode-hook go-ts-mode-hook
                 rust-mode-hook rust-ts-mode-hook
-                json-mode-hook json-ts-mode-hook
+                ;; `js-json-mode' also runs `js-mode-hook'; the timer in
+                ;; `my/lsp-ensure' collapses the two calls into one start.
+                json-mode-hook json-ts-mode-hook js-json-mode-hook
                 css-mode-hook css-ts-mode-hook
                 html-mode-hook html-ts-mode-hook
                 yaml-mode-hook yaml-ts-mode-hook
@@ -595,7 +599,27 @@ result."
   ;; or show them automatically when point lands on an error.
   (flycheck-display-errors-function nil)
   (flycheck-indication-mode 'right-fringe)
-  (flycheck-emacs-lisp-load-path 'inherit))
+  (flycheck-emacs-lisp-load-path 'inherit)
+  ;; Checkdoc's docstring style rules flood private configuration and
+  ;; scratch files with warnings; keep the byte-compiler checker only.
+  (flycheck-disabled-checkers '(emacs-lisp-checkdoc)))
+
+(defun my/flycheck-without-lsp ()
+  "Check this file with Flycheck's own checkers when no server will.
+Emacs Lisp files use the byte compiler checker; shell scripts use ShellCheck
+when it is installed and bash-language-server is not.  Unsaved, remote and
+LSP-managed buffers are left alone."
+  (when (and buffer-file-name
+             (not (file-remote-p buffer-file-name))
+             (not (my/language-server-available-p))
+             (or (derived-mode-p 'emacs-lisp-mode)
+                 (executable-find "shellcheck")))
+    (require 'flycheck)
+    (flycheck-mode 1)))
+
+(add-hook 'emacs-lisp-mode-hook #'my/flycheck-without-lsp)
+(add-hook 'sh-mode-hook #'my/flycheck-without-lsp)
+(add-hook 'bash-ts-mode-hook #'my/flycheck-without-lsp)
 
 (use-package consult-flycheck
   :after (consult flycheck)
@@ -637,12 +661,42 @@ Otherwise retain Apheleia's mode defaults.  Use directory-local
         (lsp-format-region beg end))
     (require 'apheleia)
     (my/project-formatter)
-    (if-let* ((formatters (apheleia--get-formatters)))
-        (apheleia-format-buffer formatters)
-      (if (and (bound-and-true-p lsp-managed-mode)
-               (lsp-feature? "textDocument/formatting"))
-          (lsp-format-buffer)
-        (indent-region (point-min) (point-max))))))
+    (let ((formatters (apheleia--get-formatters)))
+      (if (and formatters (seq-every-p #'my/formatter-available-p formatters))
+          (apheleia-format-buffer formatters)
+        ;; Apheleia would only report a missing program; format with the
+        ;; language server, or at least reindent, instead.
+        (when formatters
+          (message "Formatter %s is not installed; using %s instead"
+                   (mapconcat #'symbol-name formatters ", ")
+                   (if (my/lsp-can-format-p) "the language server" "indentation")))
+        (if (my/lsp-can-format-p)
+            (lsp-format-buffer)
+          (indent-region (point-min) (point-max)))))))
+
+(defun my/lsp-can-format-p ()
+  "Return non-nil when an attached language server formats whole buffers."
+  (and (bound-and-true-p lsp-managed-mode)
+       (lsp-feature? "textDocument/formatting")))
+
+(defun my/formatter-available-p (formatter)
+  "Return non-nil when Apheleia's FORMATTER can run here.
+Lisp formatters always can.  Commands need their program on `exec-path';
+for Apheleia's apheleia-npx wrapper (and the `npx' marker) that is the
+wrapped tool, found on `exec-path' or in a node_modules/.bin directory."
+  (let ((command (alist-get formatter apheleia-formatters)))
+    (cond
+     ((or (null command) (functionp command)) t)
+     ((consp command)
+      (let* ((words (remq 'npx command))
+             (program (car words))
+             (program (if (equal program "apheleia-npx") (cadr words) program)))
+        (or (not (stringp program))
+            (executable-find program)
+            (when-let* ((modules (locate-dominating-file default-directory "node_modules")))
+              (file-executable-p
+               (expand-file-name program (expand-file-name "node_modules/.bin" modules)))))))
+     (t t))))
 
 (defun my/toggle-global-format-on-save ()
   "Toggle format-on-save across eligible buffers, including future buffers."
