@@ -79,6 +79,18 @@ jobs:
       - name: Install packages and grammars (Windows)
         if: runner.os == 'Windows'
         run: emacs --batch --eval "(setq package-check-signature nil)" --load scripts/bootstrap.el --grammars
+      # Ghostel's terminal is a native module that a user downloads at the
+      # first terminal launch; the agent suites need it to start terminals.
+      # Loading `ghostel' loads a cached module, so this downloads only once.
+      - name: Install the Ghostel terminal module
+        if: runner.os != 'Windows'
+        run: >-
+          emacs -Q --batch
+          --eval "(setq package-user-dir (expand-file-name \"elpa\"))"
+          --eval "(package-initialize)"
+          --eval "(require 'ghostel)"
+          --eval "(unless (featurep 'ghostel-module) (ghostel-download-module))"
+          --eval "(unless (featurep 'ghostel-module) (error \"Ghostel module did not load\"))"
       - name: Run every test suite
         run: python scripts/test.py
       - name: Check whitespace

@@ -80,8 +80,12 @@ to its own terminal."
   (lazyemacs-agent-test-wait (lambda () (eq state (lazyemacs-agent-state buffer)))))
 
 (defmacro lazyemacs-agent-test-needs-terminal ()
-  "Skip the test where the fake agent cannot run."
-  '(skip-unless (and (my/ghostel-available-p) (executable-find "sh")
+  "Skip the test where the fake agent cannot run.
+Loading `ghostel' loads its native module when one is installed; without
+one, starting a terminal would ask to download it, which batch Emacs
+cannot answer."
+  '(skip-unless (and (my/ghostel-available-p) (featurep 'ghostel-module)
+                     (executable-find "sh")
                      (not (memq system-type '(windows-nt ms-dos))))))
 
 (ert-deftest lazyemacs-agent/claude-and-codex-commands ()
