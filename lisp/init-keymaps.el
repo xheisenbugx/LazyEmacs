@@ -406,8 +406,8 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 
 (lazyemacs-define-leader-map
  'my/leader-workspace-prefix
- '(("<tab>" "New tab" tab-bar-new-tab)
-   ("TAB" "New tab" tab-bar-new-tab)
+ '(("<tab>" "New tab (scratch or terminal)" my/session-new-tab)
+   ("TAB" "New tab (scratch or terminal)" my/session-new-tab)
    ("'" "Last session" lazyemacs-sesh-last)
    ("[" "Previous tab" project-tab-sessions-previous-tab)
    ("]" "Next tab" project-tab-sessions-next-tab)
@@ -547,7 +547,7 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 (keymap-global-set "s-p" #'lazyemacs-sesh-connect)
 ;; macOS binds s-' to cycling frames; s-` still does that.
 (keymap-global-set "s-'" #'lazyemacs-sesh-last)
-(keymap-global-set "s-t" #'tab-bar-new-tab)
+(keymap-global-set "s-t" #'my/session-new-tab)
 (keymap-global-set "s-r" #'tab-bar-rename-tab)
 (keymap-global-set "s-w" #'tab-bar-close-tab)
 

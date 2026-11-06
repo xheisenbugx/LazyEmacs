@@ -12,6 +12,8 @@
 (require 'tab-bar)
 (require 'seq)
 
+(declare-function my/project-ghostel-new "init-tools")
+
 ;; Terminal-only Evil hooks must not be restored into placeholder buffers.
 ;; A fresh Ghostel shell enables its integration through the normal mode hook.
 (add-to-list 'desktop-minor-mode-table '(evil-ghostel-mode nil))
@@ -54,6 +56,23 @@ Used by `lazyemacs-sesh-import-desktop'; sessions now have their own files."
   ;; A named layout starts from the current code view, rather than a shell.
   (let ((tab-bar-new-tab-choice nil)) (tab-bar-new-tab))
   (tab-bar-rename-tab name))
+
+(defun my/session-new-tab (kind)
+  "Open a layout tab in this session showing a scratch buffer or a terminal.
+KIND is `scratch' or `terminal'; interactively, ask with a single key.
+A terminal is an independent shell from `my/project-ghostel-new', started
+in the project of the buffer you were in when you made the tab."
+  (interactive
+   (list (pcase (car (read-multiple-choice
+                      "New tab with"
+                      '((?s "scratch" "The *scratch* buffer")
+                        (?t "terminal" "A new shell in this project"))))
+           (?s 'scratch) (?t 'terminal))))
+  ;; *scratch* has its own directory, so remember which project we came from.
+  (let ((directory default-directory))
+    (let ((tab-bar-new-tab-choice "*scratch*")) (tab-bar-new-tab))
+    (when (eq kind 'terminal)
+      (let ((default-directory directory)) (my/project-ghostel-new)))))
 
 (defun my/window-zoom ()
   "Maximize the selected code window, or restore this tab's previous layout."

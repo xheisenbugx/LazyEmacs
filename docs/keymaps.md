@@ -428,7 +428,7 @@ appears only when `lazyemacs-enable-mail` is set.
 
 | Keys | Action |
 |---|---|
-| <kbd>SPC TAB TAB</kbd> | New tab |
+| <kbd>SPC TAB TAB</kbd> | New tab (scratch or terminal) |
 | <kbd>SPC TAB '</kbd> | Last session |
 | <kbd>SPC TAB [</kbd> | Previous tab |
 | <kbd>SPC TAB ]</kbd> | Next tab |
@@ -490,7 +490,7 @@ Standard Emacs keys keep working and use the richer pickers:
 | <kbd>C-x u</kbd> | Undo tree |
 | <kbd>C-h f</kbd> <kbd>C-h v</kbd> <kbd>C-h k</kbd> | Helpful documentation |
 | <kbd>s-p</kbd>, <kbd>s-1</kbd> … <kbd>s-0</kbd> | Session picker, select layout tab |
-| <kbd>s-t</kbd> / <kbd>s-r</kbd> / <kbd>s-w</kbd> | New/rename/close layout tab |
+| <kbd>s-t</kbd> / <kbd>s-r</kbd> / <kbd>s-w</kbd> | New (scratch or terminal)/rename/close layout tab |
 | <kbd>C-TAB</kbd> / <kbd>C-S-TAB</kbd> | Next/previous layout tab |
 
 ## Intentional differences

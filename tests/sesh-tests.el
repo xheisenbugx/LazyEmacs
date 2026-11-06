@@ -429,6 +429,39 @@
       (should (equal (lazyemacs-sesh--current) "brand new"))
       (should-not (lazyemacs-sesh--live-root "brand new")))))
 
+;; A zoxide directory outside Git is a session root and must be a project too.
+(ert-deftest lazyemacs-sesh/directory-outside-git-is-a-project ()
+  (lazyemacs-sesh-test
+    (let* ((outer (lazyemacs-sesh-test-project "outer"))
+           (root (lazyemacs-sesh-test-project "outer/plain" "a.txt"))
+           (inner (lazyemacs-sesh-test-project "outer/plain/inner" "b.txt"))
+           (rooted (lambda (directory)
+                     (when-let* ((project (project-current nil directory)))
+                       (lazyemacs-sesh--dir (project-root project))))))
+      (should-not (funcall rooted root))
+      (lazyemacs-sesh-connect-to root)
+      (should (equal (lazyemacs-sesh--current) "plain"))
+      (should (member (abbreviate-file-name root) (project-known-project-roots)))
+      ;; The session's directory and everything below it, but not above.
+      (should (equal (funcall rooted root) root))
+      (should (equal (funcall rooted inner) root))
+      (should-not (funcall rooted outer))
+      (find-file (expand-file-name "b.txt" inner))
+      (should (equal (lazyemacs-sesh--dir (project-root (project-current t))) root))
+      ;; A directory inside another session still gets a session of its own.
+      (lazyemacs-sesh-connect-to inner)
+      (should (equal (lazyemacs-sesh--current) "inner"))
+      (should (equal (lazyemacs-sesh--live-root "inner") inner))
+      (should (equal (funcall rooted inner) inner))
+      ;; Closed, it stays a known project, so the dashboard can reopen it.
+      (lazyemacs-sesh-detach "plain")
+      (lazyemacs-sesh-detach "inner")
+      (should-not (lazyemacs-sesh--live-root "plain"))
+      (should (equal (funcall rooted root) root))
+      (should (equal (funcall rooted inner) inner))
+      ;; Below a closed session root, only a session's own directory counts.
+      (should-not (funcall rooted (lazyemacs-sesh-test-project "outer/plain/other"))))))
+
 (ert-deftest lazyemacs-sesh/worktree-action-creates-a-session ()
   (skip-unless (executable-find "git"))
   (lazyemacs-sesh-test

@@ -165,6 +165,51 @@ Remote names are only expanded, to avoid opening connections."
   (seq-find (lambda (name) (equal root (lazyemacs-sesh--live-root name)))
             (lazyemacs-sesh--live-names)))
 
+;;; Session directories as projects
+
+;; A session made from a directory outside version control, such as a zoxide
+;; entry, has a root but no project, so `SPC p f', `SPC /' and project
+;; terminals would prompt for one.  This backend makes the session's directory
+;; the project.  It runs after `project-try-vc', so a repository inside the
+;; directory is still its own project, and before `my/project-try-manifest',
+;; so a package.json below the root does not split the session.
+
+(defvar lazyemacs-sesh--root-projects t
+  "Non-nil lets `lazyemacs-sesh--try-root' find projects.
+Connecting binds it to nil, so a directory inside another session's root
+gets a session of its own.")
+
+(defun lazyemacs-sesh--live-roots ()
+  "Return the roots of live sessions in every frame."
+  (delete-dups
+   (delq nil (mapcar (lambda (tab) (alist-get 'project-tab-sessions-root (cdr tab)))
+                     (seq-mapcat (lambda (frame) (frame-parameter frame 'tabs))
+                                 (frame-list))))))
+
+(defun lazyemacs-sesh--try-root (directory)
+  "Return a project for DIRECTORY from the session directories.
+DIRECTORY belongs to the innermost live session root containing it.  A known
+project root counts on its own after its session closes, so the dashboard
+and `project-switch-project' can reopen it."
+  (when lazyemacs-sesh--root-projects
+    (let* ((directory (lazyemacs-sesh--dir directory))
+           (root (or (seq-reduce (lambda (best root)
+                                   (if (and (string-prefix-p root directory)
+                                            (> (length root) (length best)))
+                                       root
+                                     best))
+                                 (lazyemacs-sesh--live-roots) nil)
+                     ;; Known roots are abbreviated; check existence last, as
+                     ;; project.el forgets roots that are gone.
+                     (and (member (abbreviate-file-name directory)
+                                  (project-known-project-roots))
+                          (file-directory-p directory)
+                          directory))))
+      ;; The shape `project-try-vc' returns for a directory without a VCS.
+      (and root (list 'vc nil root)))))
+
+(add-hook 'project-find-functions #'lazyemacs-sesh--try-root 80)
+
 ;;; Session files
 
 (defun lazyemacs-sesh--file (name &optional extension)
@@ -602,9 +647,11 @@ Missing files and directories are skipped; their windows show *scratch*."
 (defun lazyemacs-sesh--connect-directory (directory)
   "Connect to the session for DIRECTORY's project, creating it if needed."
   (let* ((directory (lazyemacs-sesh--dir directory))
-         (project (project-current nil directory))
+         (project (let ((lazyemacs-sesh--root-projects nil))
+                    (project-current nil directory)))
          (root (if project (project-tab-sessions--root project) directory)))
-    (when project (project-remember-project project))
+    ;; A directory outside version control becomes a project of its own.
+    (project-remember-project (or project (list 'vc nil root)))
     (if-let* ((live (lazyemacs-sesh--live-for-root root)))
         (project-tab-sessions-switch live)
       (if-let* ((data (lazyemacs-sesh--saved-for-root root)))

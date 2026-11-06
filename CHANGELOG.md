@@ -24,8 +24,13 @@ All notable changes to LazyEmacs. Dates are release dates (YYYY-MM-DD).
 - `SPC ,` and `H`/`L` stay within the current session's buffers (`a SPC` in the
   picker shows all).
 - New worktree-as-session (`SPC TAB w`) and clone-and-connect (`SPC TAB c`).
+- `SPC TAB TAB` and `s-t` ask what a new tab shows: `s` for `*scratch*`, `t`
+  for a new shell in the current project (`my/project-ghostel-new`).
 - `bin/lazyemacs-connect` opens a directory or session from the shell, tmux,
   sesh or zoxide.
+- A session made from a directory outside Git (a zoxide entry, say) is now a
+  project: `SPC p f`, `SPC /` and project terminals use its directory instead
+  of asking for one, and it joins the known projects.
 - The tab bar shows a `+N` count of other sessions, the mode line shows the
   session name, and the dashboard lists recent sessions.
 
