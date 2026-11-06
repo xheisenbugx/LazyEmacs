@@ -61,6 +61,12 @@ running on the most extensible editor ever made.
   session keeps its own tabs and layouts, is saved to its own file, and comes
   back where you left it when you connect. Declare favourites in
   `user/config.el`, and connect from the terminal with `bin/lazyemacs-connect`.
+- **Coding agents, side by side.** Run Claude Code, Codex or any terminal agent
+  in a session tab or its own Git worktree (<kbd>SPC a n</kbd>). The mode line
+  and tab bar show which agents are working, waiting for your approval or done;
+  <kbd>SPC a j</kbd> jumps to the next one that needs you, <kbd>SPC a s</kbd>
+  picks any of them, and <kbd>SPC a r</kbd> / <kbd>SPC a c</kbd> review the
+  changes and open a pull request.
 - **Reproducible and modular, the lazy.nvim way.** A committed
   `lazyemacs-lock.eld` pins every package (<kbd>SPC l u</kbd> update,
   <kbd>SPC l r</kbd> restore), and `M-x lazyemacs-extras` turns on optional
@@ -165,7 +171,7 @@ Personal settings go in `user/` (copy the templates from `examples/`):
 
 ;; user/config.el: packages and keys, loaded last
 (use-package gptel :commands gptel)
-(keymap-set my/leader-map "a" '("AI chat" . gptel))
+(keymap-set my/leader-agent-map "g" '("AI chat" . gptel))
 ```
 
 See **[configuration](docs/configuration.md)** for every option and more recipes.

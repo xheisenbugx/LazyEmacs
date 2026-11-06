@@ -53,6 +53,10 @@ Set these in `user/early.el` and restart:
 | `lazyemacs-extras` | `nil` | [Extras](#extras) to load, in addition to `user/extras.eld` |
 | `lazyemacs-lock-file` | `lazyemacs-lock.eld` in the distribution | The [package lockfile](#package-lockfile) |
 | `lazyemacs-offline` | `nil` (`t` with `LAZYEMACS_OFFLINE=1`) | Never download or update packages |
+| `lazyemacs-agents` | Claude Code and Codex | Agents <kbd>SPC a</kbd> can start, and how to resume them |
+| `lazyemacs-agent-default` | `"claude"` | Agent started without asking (<kbd>C-u</kbd> asks) |
+| `lazyemacs-agent-notify` | `t` | Message, plus a desktop notification when Emacs is unfocused |
+| `lazyemacs-agent-prompts` | Explain, review, fix diagnostics, tests… | Prompts for <kbd>SPC a p</kbd> |
 | `my/lsp-visual-extras` | `nil` | Breadcrumbs, highlights, inlay hints, code lenses |
 | `my/lsp-diagnostics-enabled` | `t` | Diagnostics when a server attaches |
 | `my/lsp-auto-start-delay` | `0.25` | Idle seconds before a server starts |

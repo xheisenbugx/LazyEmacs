@@ -132,6 +132,29 @@ Desktop removes the flag during `after-init-hook', so read it at load time.")
   "Names of the sessions in which this buffer has been shown.")
 (put 'lazyemacs-sesh--buffer-sessions 'permanent-local t)
 
+;; Other modules (agents, for one) keep their own buffers in session files
+;; through these hooks, without this module knowing about them.
+
+(defvar lazyemacs-sesh-buffer-spec-functions nil
+  "Functions describing how to recreate a buffer in a saved layout.
+Each is called with a buffer and returns a printable spec, a list starting
+with a keyword, or nil to let the next function or the built-in kinds
+\(files, Dired, terminals) decide.  The spec comes back to
+`lazyemacs-sesh-restore-buffer-functions'.")
+
+(defvar lazyemacs-sesh-restore-buffer-functions nil
+  "Functions recreating a buffer from a spec of an unknown kind.
+Each is called with the SPEC and the buffer's saved NAME and returns a
+buffer, or nil to let the next function try.")
+
+(defvar lazyemacs-sesh-save-functions nil
+  "Functions adding data to a session's file.
+Each is called with the session NAME and returns a property list, which
+is appended to the saved data; keep it printable.")
+
+(defvar lazyemacs-sesh-restore-functions nil
+  "Functions run after a session is restored, with its saved DATA.")
+
 ;;; Live sessions
 
 (defun lazyemacs-sesh--current ()
@@ -378,7 +401,8 @@ A state is (SIZES . ROOT-NODE); nil means nothing worth keeping."
 (defun lazyemacs-sesh--buffer-spec (buffer)
   "Describe how to recreate BUFFER, or return nil if it is not restorable."
   (with-current-buffer buffer
-    (cond (buffer-file-name (list :file buffer-file-name))
+    (cond ((run-hook-with-args-until-success 'lazyemacs-sesh-buffer-spec-functions buffer))
+          (buffer-file-name (list :file buffer-file-name))
           ((derived-mode-p 'dired-mode) (list :dired (expand-file-name default-directory)))
           ((lazyemacs-sesh--terminal-p buffer)
            (list :terminal (expand-file-name (or my/session-terminal-directory
@@ -397,34 +421,38 @@ A state is (SIZES . ROOT-NODE); nil means nothing worth keeping."
                            (funcall tab-bar-tabs-function frame)))
          (current (seq-position tabs 'current-tab (lambda (tab type) (eq (car tab) type)))))
     (when tabs
-      (list
-       :version 1
-       :name name
-       :root (seq-some (lambda (tab) (alist-get 'project-tab-sessions-root tab)) tabs)
-       :last-used (if current (float-time)
-                    (apply #'max 0 (mapcar (lambda (tab) (or (alist-get 'time tab) 0)) tabs)))
-       :current (or current
-                    (seq-position tabs (seq-reduce (lambda (best tab)
-                                                     (if (> (or (alist-get 'time tab) 0)
-                                                            (or (alist-get 'time best) 0))
-                                                         tab best))
-                                                   tabs (car tabs))))
-       :tabs
-       (mapcar
-        (lambda (tab)
-          (let* ((buffers nil)
-                 (state (lazyemacs-sesh--map-state
-                         (lazyemacs-sesh--strip-state (lazyemacs-sesh--tab-state tab frame))
-                         (lambda (buffer-name)
-                           (when-let* ((buffer (get-buffer buffer-name))
-                                       (spec (lazyemacs-sesh--buffer-spec buffer)))
-                             (push (cons buffer-name spec) buffers))
-                           buffer-name))))
-            (list :name (alist-get 'name tab)
-                  :explicit (and (alist-get 'explicit-name tab) t)
-                  :state state
-                  :buffers (nreverse buffers))))
-        tabs)))))
+      (append
+       (list
+        :version 1
+        :name name
+        :root (seq-some (lambda (tab) (alist-get 'project-tab-sessions-root tab)) tabs)
+        :last-used (if current (float-time)
+                     (apply #'max 0 (mapcar (lambda (tab) (or (alist-get 'time tab) 0)) tabs)))
+        :current (or current
+                     (seq-position tabs (seq-reduce (lambda (best tab)
+                                                      (if (> (or (alist-get 'time tab) 0)
+                                                             (or (alist-get 'time best) 0))
+                                                          tab best))
+                                                    tabs (car tabs))))
+        :tabs
+        (mapcar
+         (lambda (tab)
+           (let* ((buffers nil)
+                  (state (lazyemacs-sesh--map-state
+                          (lazyemacs-sesh--strip-state (lazyemacs-sesh--tab-state tab frame))
+                          (lambda (buffer-name)
+                            (when-let* ((buffer (get-buffer buffer-name))
+                                        (spec (lazyemacs-sesh--buffer-spec buffer)))
+                              (push (cons buffer-name spec) buffers))
+                            buffer-name))))
+             (list :name (alist-get 'name tab)
+                   :explicit (and (alist-get 'explicit-name tab) t)
+                   :state state
+                   :buffers (nreverse buffers))))
+         tabs))
+       ;; Extra data from other modules, such as the session's agents.
+       (mapcan (lambda (function) (copy-sequence (funcall function name)))
+               lazyemacs-sesh-save-functions)))))
 
 (defun lazyemacs-sesh--worth-saving-p (data)
   "Return non-nil when DATA holds a root, files, or named layouts."
@@ -523,7 +551,9 @@ Saved files are kept; quitting will not overwrite them.  `SPC q S' resumes."
     (`(:terminal ,directory)
      (let ((live (get-buffer name)))
        (if (and live (lazyemacs-sesh--terminal-p live)) live
-         (my/session-restore-terminal nil name directory))))))
+         (my/session-restore-terminal nil name directory))))
+    (_ (run-hook-with-args-until-success 'lazyemacs-sesh-restore-buffer-functions
+                                         spec name))))
 
 (defun lazyemacs-sesh--reset-windows ()
   "Leave the selected tab with one ordinary window, selected.
@@ -586,6 +616,11 @@ Missing files and directories are skipped; their windows show *scratch*."
             (lazyemacs-sesh--track-windows (selected-frame)))
           (let ((count (length (project-tab-sessions--tabs name))))
             (project-tab-sessions-select-tab (1+ (min (1- count) (or (plist-get data :current) 0)))))
+          ;; Another module's broken data must not undo a good restore.
+          (dolist (function lazyemacs-sesh-restore-functions)
+            (condition-case err (funcall function data)
+              (error (message "Could not restore part of session %s: %s"
+                              name (error-message-string err)))))
           (setq done t))
       (if done
           (setq lazyemacs-sesh--unsaveable (delete name lazyemacs-sesh--unsaveable))
@@ -1445,15 +1480,6 @@ Each restored tab group is then saved to its own session file."
 
 ;;; Display
 
-(defun lazyemacs-sesh-tab-bar-others ()
-  "Tab bar item counting the other live sessions, dimmed; click to switch."
-  (let ((others (remove (lazyemacs-sesh--current) (lazyemacs-sesh--live-names))))
-    (when others
-      `((lazyemacs-sesh-others
-         menu-item ,(propertize (format " +%d " (length others)) 'face 'shadow)
-         lazyemacs-sesh-connect
-         :help ,(concat "Other sessions: " (string-join others ", ")))))))
-
 (defun lazyemacs-sesh-mode-line-string ()
   "Return the current session name for the mode line."
   (when-let* ((name (and lazyemacs-sesh-mode-line (lazyemacs-sesh--current))))
@@ -1529,8 +1555,6 @@ Each restored tab group is then saved to its own session file."
 
 (add-hook 'tab-bar-tab-post-select-functions #'lazyemacs-sesh--after-select)
 (add-hook 'window-buffer-change-functions #'lazyemacs-sesh--track-windows)
-(unless (memq #'lazyemacs-sesh-tab-bar-others tab-bar-format)
-  (setq tab-bar-format (append tab-bar-format '(lazyemacs-sesh-tab-bar-others))))
 (unless (member 'lazyemacs-sesh-mode-line-construct (ensure-list global-mode-string))
   ;; A mode-line list starting with a symbol is a conditional, so lead with "".
   (setq global-mode-string

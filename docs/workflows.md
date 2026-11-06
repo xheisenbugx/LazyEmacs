@@ -10,6 +10,7 @@ How the pieces fit together for everyday work. Every key is listed in
 - [Terminals](#terminals)
 - [Tasks and tests](#tasks-and-tests)
 - [Projects, sessions, and layouts](#projects-sessions-and-layouts)
+- [Coding agents](#coding-agents)
 - [Git](#git)
 - [Structural editing](#structural-editing)
 - [Notes and mail](#notes-and-mail)
@@ -169,8 +170,8 @@ LazyEmacs organizes work in three levels, all using Emacs's native tab bar:
   this session only.
 - **Buffers** are shared, so closing a layout never kills your files or shells.
 
-The tab bar shows the current session, its layouts, and a dim `+N` for the
-other open sessions; the mode line shows the session name.
+The tab bar, always shown, holds the current session and its layouts; the
+mode line shows the session name.
 
 ### Connecting
 
@@ -314,6 +315,92 @@ directly; there is no wrapper script yet.
 
 Session grouping comes from
 [project-tab-sessions](https://github.com/xheisenbugx/project-tab-sessions).
+
+## Coding agents
+
+Agents such as [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+and [Codex](https://github.com/openai/codex) run in Ghostel terminals that
+belong to a session, so you can run several at once and still know which one
+needs you.
+
+### Starting
+
+- <kbd>SPC a n</kbd> starts a task. Type what the agent should do; inside a Git
+  repository, choose **here** (a new tab in this session) or **worktree** (a
+  new branch `agent/<task>`, a worktree beside the repository and a session of
+  its own, as <kbd>SPC TAB w</kbd> makes). <kbd>C-u SPC a n</kbd> asks which
+  agent to use.
+- <kbd>SPC a a</kbd> shows this session's agent beside the code, or hides it,
+  starting one at the project root when there is none, as LazyVim's sidekick
+  does. <kbd>SPC a d</kbd> hides it; it keeps running.
+
+### Knowing which agent needs you
+
+Claude Code and Codex report their state to the terminal themselves (with
+OSC 7501, Ghostel's program status). LazyEmacs shows it everywhere:
+
+| Glyph | State |
+|---|---|
+| ◆ | Blocked: waiting for your approval or an answer |
+| ✗ | Failed |
+| ✓ | Done, and you have not looked yet |
+| ● | Working |
+| ○ | Idle, waiting for a new task |
+| ■ | Stopped; can be resumed |
+
+- The mode line counts agents by state (` ◆1 ●2 `); click it to pick one.
+- The tab bar marks each agent's tab, and names other sessions with an agent
+  waiting (`api◆`); click one to go there.
+- <kbd>SPC a j</kbd> jumps to the next agent that needs you, most urgent first,
+  switching sessions as needed. Repeat it to walk them all.
+- <kbd>SPC a s</kbd> picks any agent, grouped by session, most urgent first.
+  Embark (<kbd>C-.</kbd>) on an entry: <kbd>r</kbd> review, <kbd>c</kbd> pull
+  request, <kbd>s</kbd> stop, <kbd>R</kbd> resume, <kbd>x</kbd> close.
+- <kbd>SPC a l</kbd> toggles a sidebar with every session's agents and how long
+  ago each changed; <kbd>RET</kbd> shows one, and the picker's keys work on the
+  line at point.
+- When an agent needs you while you look elsewhere, a message says so (with
+  what it waits for, such as "approve Write: notes.md"), plus a desktop
+  notification when Emacs is not focused. `lazyemacs-agent-notify` turns this
+  down.
+
+Looking at a finished agent marks it as seen. An agent started by hand in any
+Ghostel terminal is listed too when it reports its state. An agent that does
+not report shows as idle while it runs.
+
+### Giving agents context
+
+<kbd>SPC a t</kbd> sends the selection or a reference to the current line
+(`@src/app.ts#L42`), <kbd>SPC a f</kbd> the file, <kbd>SPC a v</kbd> the
+selected text with its location, and <kbd>SPC a p</kbd> a prompt from
+`lazyemacs-agent-prompts` (explain, review, fix this buffer's diagnostics,
+write tests…). The text goes into the agent's prompt without being submitted,
+so add to it and press <kbd>RET</kbd>.
+
+### Reviewing and finishing
+
+- <kbd>SPC a r</kbd> opens the agent's changes in Magit: for a worktree task,
+  everything since it branched, committed or not.
+- <kbd>SPC a c</kbd> pushes the branch and opens a pull request with the GitHub
+  CLI. Uncommitted changes come first: the agent can commit them for you, or
+  Magit opens.
+- <kbd>SPC a x</kbd> closes the task: it stops the agent and closes its tab, and
+  for a worktree task also its session and the worktree (after asking about
+  uncommitted changes). The branch is kept.
+
+### Stopping and resuming
+
+Sessions save their agents. Quitting Emacs or <kbd>SPC a k</kbd> stops an
+agent; it comes back as a placeholder in its tab where <kbd>RET</kbd> (or
+<kbd>SPC a R</kbd>) resumes the conversation: `claude --resume` with the
+agent's own conversation id, or `codex resume --last` in its directory.
+Detaching a session (<kbd>SPC TAB d</kbd>) leaves its agents running.
+
+Add other agents to `lazyemacs-agents`:
+
+```elisp
+(add-to-list 'lazyemacs-agents '("aider" :program "aider" :args ("--no-auto-commits")))
+```
 
 ## Git
 

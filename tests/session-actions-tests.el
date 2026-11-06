@@ -100,5 +100,13 @@
   (dolist (action '(my/session-close my/session-rename))
     (should (memq #'embark--restart (alist-get action embark-post-action-hooks)))))
 
+;; The tab bar names the session, so it stays visible
+;; when a lone session is down to one tab (after detaching the rest, say).
+(ert-deftest my/session-picker-tab-bar-shows-a-lone-session ()
+  (tab-bar-new-tab)
+  (tab-bar-close-other-tabs)
+  (should (= 1 (length (funcall tab-bar-tabs-function))))
+  (should (equal (frame-parameter nil 'tab-bar-lines) 1)))
+
 (setq kill-emacs-hook nil)
 (ert-run-tests-batch-and-exit "my/session-picker-")

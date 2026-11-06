@@ -579,11 +579,7 @@
 (ert-deftest lazyemacs-sesh/tab-bar-and-mode-line ()
   (lazyemacs-sesh-test
     (lazyemacs-sesh-connect-to "Shown")
-    (should (memq 'lazyemacs-sesh-tab-bar-others tab-bar-format))
     (should (memq 'project-tab-sessions-format tab-bar-format))
-    (let ((item (car (lazyemacs-sesh-tab-bar-others))))
-      (should (string-match-p "\\+[0-9]" (nth 2 item)))
-      (should (eq (nth 3 item) 'lazyemacs-sesh-connect)))
     (should (string-match-p "Shown" (lazyemacs-sesh-mode-line-string)))
     (should (member 'lazyemacs-sesh-mode-line-construct global-mode-string))
     ;; A list starting with a symbol would be a mode-line conditional.
