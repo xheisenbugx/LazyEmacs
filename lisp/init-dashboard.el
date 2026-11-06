@@ -125,6 +125,8 @@
       (insert "\n"))
     (when (fboundp 'lazyemacs-sesh-dashboard-insert)
       (lazyemacs-sesh-dashboard-insert indent column-width))
+    (when (fboundp 'lazyemacs-agent-dashboard-insert)
+      (lazyemacs-agent-dashboard-insert indent column-width))
     ;; Remote entries are listed without checking them: probing /ssh: or
     ;; /docker: names would open a TRAMP connection while drawing.
     (when-let* ((files (seq-take (seq-filter (lambda (file)

@@ -433,7 +433,29 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
    ("n" "New snippet" yas-new-snippet)
    ("v" "Visit snippet file" yas-visit-snippet-file)))
 
+;; LazyVim's AI extra (sidekick.nvim) uses `SPC a' for its CLI agents: toggle,
+;; select, send this, file, selection or a prompt, and detach.  The others are
+;; LazyEmacs's agent workflow (init-agents.el).
+(lazyemacs-define-leader-map
+ 'my/leader-agent-prefix
+ '(("a" "Toggle agent" lazyemacs-agent-toggle)
+   ("c" "Commit, push and open PR" lazyemacs-agent-pull-request)
+   ("d" "Detach (hide) agent" lazyemacs-agent-detach)
+   ("f" "Send file" lazyemacs-agent-send-file)
+   ("j" "Next agent needing you" lazyemacs-agent-next)
+   ("k" "Stop agent" lazyemacs-agent-stop)
+   ("l" "Agents sidebar" lazyemacs-agents-sidebar)
+   ("n" "New agent task" lazyemacs-agent-new)
+   ("p" "Select prompt" lazyemacs-agent-prompt)
+   ("r" "Review changes" lazyemacs-agent-review)
+   ("R" "Resume agent" lazyemacs-agent-resume)
+   ("s" "Select agent" lazyemacs-agent-select)
+   ("t" "Send this" lazyemacs-agent-send-this)
+   ("v" "Send selection" lazyemacs-agent-send-selection)
+   ("x" "Close task" lazyemacs-agent-close)))
+
 ;; Keep the historical variable names; private configurations may use them.
+(defvar my/leader-agent-map (symbol-function 'my/leader-agent-prefix))
 (defvar my/leader-buffer-map (symbol-function 'my/leader-buffer-prefix))
 (defvar my/leader-code-map (symbol-function 'my/leader-code-prefix))
 (defvar my/leader-debug-map (symbol-function 'my/leader-debug-prefix))
@@ -468,7 +490,8 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 
 ;; (KEY DESCRIPTION MAP C-c-ALIAS).  Groups with a nil alias are SPC-only.
 (defconst lazyemacs-leader-groups
-  `(("b" "Buffers" ,my/leader-buffer-map "b")
+  `(("a" "AI agents" ,my/leader-agent-map "a")
+    ("b" "Buffers" ,my/leader-buffer-map "b")
     ("c" "Code" ,my/leader-code-map "c")
     ("d" "Debug" ,my/leader-debug-map "d")
     ("f" "Files" ,my/leader-file-map "f")
@@ -550,6 +573,8 @@ PARENT, when non-nil, supplies inherited bindings (used for `SPC w')."
 (keymap-global-set "s-t" #'my/session-new-tab)
 (keymap-global-set "s-r" #'tab-bar-rename-tab)
 (keymap-global-set "s-w" #'tab-bar-close-tab)
+;; Replaces macOS's Select All (s-a); C-x h and Visual ggVG still select all.
+(keymap-global-set "s-a" #'lazyemacs-agent-select)
 
 ;;; Evil-native navigation
 

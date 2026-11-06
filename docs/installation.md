@@ -24,6 +24,8 @@ optional and only affects the feature that uses it.
 | Language servers, formatters, debuggers | Per language | As needed |
 | aspell or hunspell | <kbd>SPC u s</kbd> spell checking | Optional |
 | [zoxide](https://github.com/ajeetdsouza/zoxide) | Frequent directories in the session picker (<kbd>s-p</kbd>) | Optional |
+| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [Codex](https://github.com/openai/codex) | Coding agents (<kbd>SPC a</kbd>) | Optional |
+| [GitHub CLI](https://cli.github.com/) (`gh`) | Opening an agent's pull request (<kbd>SPC a c</kbd>) | Optional |
 
 Check the version you will actually launch with `emacs --version`; package
 repositories often ship older releases.

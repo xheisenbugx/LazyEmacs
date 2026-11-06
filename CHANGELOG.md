@@ -31,8 +31,39 @@ All notable changes to LazyEmacs. Dates are release dates (YYYY-MM-DD).
 - A session made from a directory outside Git (a zoxide entry, say) is now a
   project: `SPC p f`, `SPC /` and project terminals use its directory instead
   of asking for one, and it joins the known projects.
-- The tab bar shows a `+N` count of other sessions, the mode line shows the
-  session name, and the dashboard lists recent sessions.
+- The mode line shows the session name, and the dashboard lists recent
+  sessions.
+- The tab bar is always shown. It used to disappear when a lone session had a
+  single tab, such as after switching away from and detaching the others.
+
+### Coding agents
+
+- **`SPC a` runs coding agents** (Claude Code, Codex, or any terminal agent
+  added to `lazyemacs-agents`) in Ghostel terminals owned by a session.
+  `SPC a n` starts a task in a new tab, or in a new branch, Git worktree and
+  session of its own; `SPC a a` toggles an agent beside the code. The
+  sidekick.nvim keys from LazyVim's AI extra work: `a s t f v p d`.
+- **Status everywhere.** Agents report working, blocked, done or failed to the
+  terminal themselves (OSC 7501). The mode line counts them, the tab bar marks
+  agent tabs and other sessions with an agent waiting, `SPC a s` (or `s-a`) picks one by
+  urgency with Embark actions, `SPC a j` jumps to the next one that needs you,
+  and `SPC a l` toggles a sidebar. A message (and a desktop notification when
+  Emacs is unfocused) says when an agent needs you.
+- **Agents go by their conversation's name.** The picker, sidebar, tab bar
+  and dashboard show the name the agent gives its conversation (Claude Code's
+  terminal title, including a `/rename`) rather than the task or just
+  "claude". Sessions save it, and a stopped Claude Code agent reads it from
+  its transcript.
+- `SPC a t`/`f`/`v`/`p` send the line, file, selection or a prompt template
+  to the session's agent without submitting it.
+- `SPC a r` reviews an agent's changes in Magit, `SPC a c` pushes its branch
+  and opens a pull request with `gh`, and `SPC a x` closes the task, removing
+  its worktree and session but keeping the branch.
+- Sessions save their agents; a stopped agent (`SPC a k`, or quitting Emacs)
+  comes back as a placeholder where `RET` resumes its conversation. The
+  dashboard lists agents and the doctor shows which ones are installed.
+- Session files can now carry data from other modules
+  (`lazyemacs-sesh-save-functions` and related hooks).
 
 ### Packages, extras, and the doctor
 

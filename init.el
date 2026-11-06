@@ -52,6 +52,7 @@
                          init-tasks
                          init-session
                          init-sesh
+                         init-agents
                          init-org
                          init-keymaps
                          init-local-actions

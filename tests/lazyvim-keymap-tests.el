@@ -238,6 +238,11 @@
     ("SPC w o" . delete-other-windows) ("SPC w w" . evil-window-next)
     ("SPC w d" . delete-window) ("SPC w m" . my/window-zoom)
     ("SPC TAB l" . my/session-last-tab) ("SPC TAB o" . my/session-close-other-tabs)
+    ;; LazyVim's AI extra, sidekick.nvim.
+    ("SPC a a" . lazyemacs-agent-toggle) ("SPC a s" . lazyemacs-agent-select)
+    ("SPC a d" . lazyemacs-agent-detach) ("SPC a t" . lazyemacs-agent-send-this)
+    ("SPC a f" . lazyemacs-agent-send-file) ("SPC a v" . lazyemacs-agent-send-selection)
+    ("SPC a p" . lazyemacs-agent-prompt)
     ("]t" . hl-todo-next) ("[t" . hl-todo-previous)
     ("gsa" . evil-surround-region) ("gsd" . evil-surround-delete)
     ("gsr" . evil-surround-change) ("C-<up>" . evil-window-increase-height))

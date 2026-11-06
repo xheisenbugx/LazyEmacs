@@ -118,6 +118,26 @@ appears only when `lazyemacs-enable-mail` is set.
 | <kbd>SPC L</kbd> | LazyEmacs changelog |
 | <kbd>SPC n</kbd> | Notification history |
 
+### <kbd>SPC a</kbd> AI agents (also <kbd>C-c a</kbd>)
+
+| Keys | Action |
+|---|---|
+| <kbd>SPC a a</kbd> | Toggle agent |
+| <kbd>SPC a c</kbd> | Commit, push and open PR |
+| <kbd>SPC a d</kbd> | Detach (hide) agent |
+| <kbd>SPC a f</kbd> | Send file |
+| <kbd>SPC a j</kbd> | Next agent needing you |
+| <kbd>SPC a k</kbd> | Stop agent |
+| <kbd>SPC a l</kbd> | Agents sidebar |
+| <kbd>SPC a n</kbd> | New agent task |
+| <kbd>SPC a p</kbd> | Select prompt |
+| <kbd>SPC a r</kbd> | Review changes |
+| <kbd>SPC a R</kbd> | Resume agent |
+| <kbd>SPC a s</kbd> | Select agent |
+| <kbd>SPC a t</kbd> | Send this |
+| <kbd>SPC a v</kbd> | Send selection |
+| <kbd>SPC a x</kbd> | Close task |
+
 ### <kbd>SPC b</kbd> Buffers (also <kbd>C-c b</kbd>)
 
 | Keys | Action |
@@ -491,6 +511,7 @@ Standard Emacs keys keep working and use the richer pickers:
 | <kbd>C-h f</kbd> <kbd>C-h v</kbd> <kbd>C-h k</kbd> | Helpful documentation |
 | <kbd>s-p</kbd>, <kbd>s-1</kbd> … <kbd>s-0</kbd> | Session picker, select layout tab |
 | <kbd>s-t</kbd> / <kbd>s-r</kbd> / <kbd>s-w</kbd> | New (scratch or terminal)/rename/close layout tab |
+| <kbd>s-a</kbd> | Agent picker, like <kbd>SPC a s</kbd> (replaces Select All) |
 | <kbd>C-TAB</kbd> / <kbd>C-S-TAB</kbd> | Next/previous layout tab |
 
 ## Intentional differences
@@ -527,6 +548,13 @@ better native tool:
   lsp-mode knows how to download; other servers come from your package manager.
 - **`gco`/`gcO` do not exist**, because <kbd>gc</kbd> is a complete Evil operator
   here. Use <kbd>o</kbd> then <kbd>M-;</kbd>.
+- **<kbd>SPC a</kbd> follows LazyVim's AI extra (sidekick.nvim)** for
+  <kbd>a</kbd> toggle, <kbd>s</kbd> select, <kbd>t</kbd>/<kbd>f</kbd>/<kbd>v</kbd>
+  send this, file or selection, <kbd>p</kbd> prompts and <kbd>d</kbd> detach.
+  Agents are Ghostel terminals rather than tmux panes, so detaching hides one
+  and it keeps running. The other <kbd>SPC a</kbd> keys (new task, next agent
+  needing you, review, pull request, stop, resume, close, sidebar) are
+  LazyEmacs additions.
 - **Emacs extensions** with no LazyVim counterpart: <kbd>SPC r</kbd> (project
   tasks), <kbd>SPC o</kbd> (Org), <kbd>SPC m</kbd> (multiple cursors),
   <kbd>SPC y</kbd> (snippets), <kbd>SPC j</kbd> (Avy/xref jumps),
@@ -543,10 +571,10 @@ own map (`my/leader-file-map`, `my/leader-code-map`, and so on). Bindings use
 (keymap-set my/leader-map "z" '("Zen mode" . olivetti-mode))
 (keymap-set my/leader-git-map "t" '("Time machine" . git-timemachine))
 
-;; A whole new group, available as SPC a and C-c a.
+;; A whole new group, available as SPC i and C-c i.
 (defvar-keymap my/leader-ai-map
   "c" '("Chat" . gptel)
   "r" '("Rewrite region" . gptel-rewrite))
-(keymap-set my/leader-map "a" (cons "AI" my/leader-ai-map))
-(keymap-global-set "C-c a" (cons "AI" my/leader-ai-map))
+(keymap-set my/leader-map "i" (cons "AI chat" my/leader-ai-map))
+(keymap-global-set "C-c i" (cons "AI chat" my/leader-ai-map))
 ```

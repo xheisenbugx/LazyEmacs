@@ -28,7 +28,8 @@
       (mapcar (lambda (tab)
                 (if (not (consp tab)) tab
                   (let ((copy (copy-sequence tab)))
-                    (dolist (key '(my/ghostel-buffer my/ghostel-cwd-buffers my/zoom-state))
+                    (dolist (key '(my/ghostel-buffer my/ghostel-cwd-buffers my/zoom-state
+                                   lazyemacs-agent))
                       (setq copy (assq-delete-all key copy)))
                     copy))) result))))
 

@@ -14,7 +14,9 @@
        :rev :newest)
   :demand t
   :custom
-  (tab-bar-show 1)
+  ;; Always shown: the tab bar names the session, so it must not vanish
+  ;; when a lone session is down to one tab.
+  (tab-bar-show t)
   (tab-bar-close-button-show nil)
   (tab-bar-new-tab-choice "*scratch*")
   (tab-bar-new-tab-group t)
